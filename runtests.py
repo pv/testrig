@@ -22,6 +22,8 @@ EXTRA_PATH = [
 
 os.environ['PATH'] = os.pathsep.join(EXTRA_PATH + os.environ.get('PATH', '').split(os.pathsep))
 
+os.environ['CCACHE_SLOPPINESS'] = 'file_macro,include_file_mtime,time_macros'
+
 def main():
     tests = testrig.get_tests()
     test_info = "\n  ".join("%-16s -- %s" % (name, t.info)
