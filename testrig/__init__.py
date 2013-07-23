@@ -33,14 +33,19 @@ class Fixture(object):
 
     """
 
-    def __init__(self, name, cache_dir, log_fn, repo_cache_dir, clean_build=True, log_prefix=False):
+    def __init__(self, name, cache_dir, log_fn,
+                 repo_cache_dir,
+                 download_cache_dir,
+                 cleanup=True, log_prefix=False):
         self.name = name
         self.log = open(log_fn, 'wb')
         self.log_fn = log_fn
         self.log_prefix = log_prefix
-        self.clean_build = clean_build
+        self.cleanup = cleanup
         self.repo_cache_dir = repo_cache_dir
-        self.download_dir = os.path.join(cache_dir, 'download')
+
+        self.cache_dir = cache_dir
+        self.download_dir = download_cache_dir
         self.env_dir = os.path.join(cache_dir, 'env')
         self.code_dir = os.path.join(cache_dir, 'code')
 
@@ -55,7 +60,9 @@ class Fixture(object):
         virtualenv.create_environment(self.env_dir)
 
     def teardown(self):
-        pass
+        if self.cleanup:
+            if os.path.isdir(self.cache_dir):
+                shutil.rmtree(self.cache_dir)
 
     def run_python_code(self, code):
         tmpd = os.path.abspath(tempfile.mkdtemp())
@@ -108,7 +115,12 @@ class Fixture(object):
     def pip_install(self, requirements):
         parts = [x.strip() for x in requirements.splitlines()
                  if x.strip()]
-        self.run_pip(['install', '--use-mirrors', '--download-cache', self.download_dir] + parts)
+
+        PARALLEL_LOCK.acquire()
+        try:
+            self.run_pip(['install', '--use-mirrors', '--download-cache', self.download_dir] + parts)
+        finally:
+            PARALLEL_LOCK.release()
 
     def git_install(self, srcs, setup_py=None):
         for module, src_repo, branch in srcs:
@@ -136,7 +148,7 @@ class Fixture(object):
             self.run_cmd(['git', 'fetch', 'origin'], cwd=repo)
 
         self.run_cmd(['git', 'reset', '--hard', 'origin/' + branch], cwd=repo)
-        if self.clean_build:
+        if self.cleanup:
             self.run_cmd(['git', 'clean', '-f', '-d', '-x'], cwd=repo)
 
         self.run_python_script([setup_py, 'install'], cwd=repo)
@@ -147,10 +159,10 @@ class Fixture(object):
     def get_cached_repo(self, module):
         return os.path.join(self.repo_cache_dir, module)
 
-    def print_header(self, name):
+    def print_header(self):
         msg = ""
         msg += ("-"*79) + "\n"
-        msg += ("Running test: %s" % name) + "\n"
+        msg += ("Running test: %s" % self.name) + "\n"
         msg += ("-"*79) + "\n"
         msg += "Logging into: %r\n" % self.log_fn
         
@@ -169,36 +181,43 @@ class Fixture(object):
             self.log.flush()
 
 
-def get_tests():
+class Test(object):
+    def __init__(self, name, func):
+        self.func = func
+        self.name = name
+        if hasattr(func, '__doc__') and func.__doc__:
+            self.info = textwrap.dedent(func.__doc__).strip()
+        else:
+            self.info = ""
+
+
+def get_tests(selection=None):
+    tests = {}
+
     import testrig
     path = testrig.__path__
-    names = []
     for importer, modname, ispkg in pkgutil.iter_modules(path):
         if not modname.startswith('test_'):
             continue
-        name = modname[5:]
 
-        modname = 'testrig.test_' + name
-        mod = __import__(modname, fromlist='x')
-        if mod.__doc__:
-            info = mod.__doc__.strip()
-        else:
-            info = ""
+        fullmodname = 'testrig.' + modname
+        mod = __import__(fullmodname, fromlist='x')
 
-        names.append((name, info))
+        for name in dir(mod):
+            if not name.startswith('test_'):
+                continue
+            obj = getattr(mod, name)
+            if not callable(obj):
+                continue
+            
+            test_name = modname[5:] + '-' + name[5:]
+            tests[test_name] = Test(test_name, obj)
 
-    return names
+    return tests
 
 
-def run(name, base_dir, clean_build=True, log_prefix=False):
-    modname = 'testrig.test_' + name
-    try:
-        mod = __import__(modname, fromlist='x')
-    except ImportError:
-        print("Test module %r does not exist" % (modname,))
-        return False
-
-    cache_dir = os.path.join(base_dir, name)
+def run(test, base_dir, cleanup=True, log_prefix=False):
+    cache_dir = os.path.join(base_dir, 'tests', test.name)
     if not os.path.isdir(cache_dir):
         os.makedirs(cache_dir)
 
@@ -209,17 +228,25 @@ def run(name, base_dir, clean_build=True, log_prefix=False):
         # probably already exists
         pass
 
-    log_fn = os.path.join(base_dir, 'test-%s.log' % name)
-    fixture = Fixture(name,
+    download_cache_dir = os.path.join(base_dir, 'download-cache')
+    try:
+        os.makedirs(download_cache_dir)
+    except OSError:
+        # probably already exists
+        pass
+
+    log_fn = os.path.join(base_dir, 'test-%s.log' % test.name)
+    fixture = Fixture(test.name,
                       cache_dir=cache_dir, log_fn=log_fn,
-                      clean_build=clean_build,
+                      cleanup=cleanup,
                       log_prefix=log_prefix,
-                      repo_cache_dir=repo_cache_dir)
-    fixture.print_header(name)
+                      repo_cache_dir=repo_cache_dir,
+                      download_cache_dir=download_cache_dir)
+    fixture.print_header()
     try:
         fixture.setup()
         try:
-            mod.run(fixture)
+            test.func(fixture)
             fixture.print("OK")
             return True
         except Exception as exc:

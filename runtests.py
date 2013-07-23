@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-runtests.py [OPTIONS] [MODULES...]
+runtests.py [OPTIONS] [TESTS...]
 
 Run tests in the test rig.
 
@@ -23,30 +23,45 @@ os.environ['PATH'] = os.pathsep.join(EXTRA_PATH + os.environ.get('PATH', '').spl
 
 def main():
     tests = testrig.get_tests()
-    modinfo = "\n  ".join("%-10s -- %s" % (name, info) for name, info in tests)
+    test_info = "\n  ".join("%-16s -- %s" % (name, t.info)
+                            for name, t in sorted(tests.items()))
     usage = __doc__.lstrip()
-    usage += "\navailable modules:\n  " + modinfo
+    usage += "\navailable tests:\n  " + test_info
 
+    # Parse arguments
     p = argparse.ArgumentParser(usage=usage)
-    p.add_argument('--no-clean-build', '-n', action="store_false",
-                   dest="clean_build", default=True,
-                   help="don't do clean rebuilds")
-    p.add_argument('--parallel', '-p', action="store", dest="parallel", type=int,
-                   default=1, metavar="N", help="run N tests in parallel")
-    p.add_argument('modules', nargs='*', default=[m for m, _ in tests],
-                   help="modules to try to run compatibility tests for")
+    p.add_argument('--no-cleanup', '-n', action="store_false",
+                   dest="cleanup", default=True,
+                   help="don't clean up before or after")
+    p.add_argument('--parallel', '-p', action="store", dest="parallel",
+                   type=int, default=1, metavar="N",
+                   help="run N tests in parallel")
+    p.add_argument('tests', nargs='*', default=None, help="tests to run")
     args = p.parse_args()
 
+    # Grab selected tests
+    if args.tests is None:
+        selected_tests = tests.values()
+    else:
+        selected_tests = []
+        for name in args.tests:
+            try:
+                selected_tests.append(tests[name])
+            except KeyError:
+                p.error("No test %r exists" % (name,))
+
+    # Run
     if args.parallel == 1:
         r = []
-        for m in args.modules:
-            r.append(testrig.run(m, CACHE_DIR, clean_build=args.clean_build))
+        for t in selected_tests:
+            r.append(testrig.run(t, CACHE_DIR, cleanup=args.cleanup))
     else:
         import joblib
         r = joblib.Parallel(n_jobs=args.parallel)(
-            joblib.delayed(testrig.run)(m, CACHE_DIR, clean_build=args.clean_build, log_prefix=True)
-            for m in args.modules)
+            joblib.delayed(testrig.run)(t, CACHE_DIR, cleanup=args.cleanup, log_prefix=True)
+            for t in selected_tests)
 
+    # Output summary
     print("\n"
           "Summary\n"
           "-------\n")
@@ -55,7 +70,9 @@ def main():
             print("- %s: OK" % m)
         else:
             print("- %s: FAIL" % m)
+    print("")
 
+    # Done.
     sys.exit(sum(map(int, r)))
 
 if __name__ == "__main__":
