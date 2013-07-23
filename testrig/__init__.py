@@ -15,6 +15,8 @@ ENV_DIR = os.path.join(CACHE_DIR, 'env')
 CODE_DIR = os.path.join(CACHE_DIR, 'code')
 
 class TestIntegration(object):
+    TEST_LOG = sys.stderr
+
     def __init__(self):
         self.tmp_virtualenv = None
 
@@ -23,7 +25,9 @@ class TestIntegration(object):
                 os.makedirs(d)
 
     def setup(self):
-        self.tmp_virtualenv = os.path.abspath(tempfile.mkdtemp(dir=ENV_DIR))
+        if os.path.isdir(ENV_DIR):
+            shutil.rmtree(ENV_DIR)
+        self.tmp_virtualenv = ENV_DIR
         virtualenv.create_environment(self.tmp_virtualenv)
 
     def teardown(self):
@@ -38,7 +42,7 @@ class TestIntegration(object):
             with open(fn, 'w') as f:
                 f.write(code)
             os.chdir(tmpd)
-            self.run_python_script(fn)
+            self.run_python_script([fn])
         finally:
             shutil.rmtree(tmpd)
             os.chdir(cwd)
@@ -49,21 +53,21 @@ class TestIntegration(object):
         self.run_cmd(cmd, **kwargs)
 
     def run_cmd(self, cmd, **kwargs):
-        if 'env' not in kwargs:
-            env = dict(os.environ)
-            env['PATH'] = os.pathsep.join(['/usr/lib/ccache'] + env.get('PATH', '').split(os.pathsep))
-            kwargs['env'] = env
+        msg = (' '.join(x if ' ' not in x else '"%s"' % x.replace('"', '\\"') for x in cmd))
+        if 'cwd' in kwargs:
+            msg = '(cd %r && %s)' % (kwargs['cwd'], msg)
+        msg = '$ ' + msg
 
-        print("$", ' '.join(x if ' ' not in x else '"%s"' % x.replace('"', '\\"')
-                            for x in cmd),
-              file=sys.stderr)
+        print(msg, file=sys.stderr)
+        if self.TEST_LOG is not sys.stderr:
+            print(msg, file=self.TEST_LOG)
 
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        p = subprocess.Popen(cmd, stdout=self.TEST_LOG, stderr=subprocess.STDOUT,
                              **kwargs)
         try:
-            out, err = p.communicate()
+            p.communicate()
             if p.returncode != 0:
-                raise RuntimeError("Failed to run %r: %s" % (cmd, out))
+                raise RuntimeError("Failed to run %r (see log)")
         except:
             p.terminate()
             raise
@@ -82,6 +86,8 @@ class TestIntegration(object):
 
     def pip_install(self, requirements):
         with tempfile.NamedTemporaryFile() as f:
+            f.write(requirements)
+            f.flush()
             self.run_pip(['install', '-r', f.name, '--use-mirrors',
                           '--download-dir', DOWNLOAD_DIR])
 
@@ -104,5 +110,26 @@ class TestIntegration(object):
     def get_repo(self, module):
         return os.path.join(CODE_DIR, module)
 
-def run_all():
-    nose.main(argv=['-v'])
+    def print_message(self):
+        msg = ""
+        msg += ("-"*79) + "\n"
+        msg += ("Running test: %s" % self.__class__.__name__) + "\n"
+        msg += ("-"*79) + "\n"
+
+        print(msg, file=sys.stderr)
+        if self.TEST_LOG is not sys.stderr:
+            print(msg, file=self.TEST_LOG)
+
+
+def run(modules=None, log=None):
+    if log is not None:
+        if isinstance(log, str):
+            TestIntegration.TEST_LOG = open(log, 'wb')
+        else:
+            TestIntegration.TEST_LOG = log
+
+    if modules is None:
+        nose.main(argv=['-vv'])
+    else:
+        targets = ['testrig.test_' + x for x in modules]
+        nose.main(argv=['-vv'] + targets)

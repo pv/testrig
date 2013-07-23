@@ -11,6 +11,7 @@ GIT_SOURCES = [
 
 class TestScipy(TestIntegration):
     def test_run(rig):
+        rig.print_message()
         rig.pip_install(REQUIREMENTS)
         rig.git_install(GIT_SOURCES)
-        rig.run_numpytest("numpy")
+        rig.run_numpytest("scipy")
