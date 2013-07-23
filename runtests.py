@@ -1,16 +1,16 @@
 #!/usr/bin/env python
 """
-runtests.py [MODULE]
+runtests.py [OPTIONS] [MODULES...]
 
-Run all tests in the test rig.
+Run tests in the test rig.
 
 """
 from __future__ import absolute_import, division, print_function
 
-import sys
 import os
-import shutil
+import sys
 import argparse
+import testrig
 
 CACHE_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'cache')
 
@@ -22,20 +22,36 @@ EXTRA_PATH = [
 os.environ['PATH'] = os.pathsep.join(EXTRA_PATH + os.environ.get('PATH', '').split(os.pathsep))
 
 def main():
-    p = argparse.ArgumentParser(usage=__doc__.lstrip())
-    p.add_argument('modules', nargs='*',
+    tests = testrig.get_tests()
+    modinfo = "\n  ".join("%-10s -- %s" % (name, info) for name, info in tests)
+    usage = __doc__.lstrip()
+    usage += "\navailable modules:\n  " + modinfo
+
+    p = argparse.ArgumentParser(usage=usage)
+    p.add_argument('--no-clean-build', '-n', action="store_false",
+                   dest="clean_build", default=True,
+                   help="don't do clean rebuilds")
+    p.add_argument('--parallel', '-p', action="store", dest="parallel", type=int,
+                   default=1, metavar="N", help="run N tests in parallel")
+    p.add_argument('modules', nargs='*', default=[m for m, _ in tests],
                    help="modules to try to run compatibility tests for")
     args = p.parse_args()
 
-    env_dir = os.path.join(CACHE_DIR, 'env')
-    if os.path.isdir(env_dir):
-        shutil.rmtree(env_dir)
+    if args.parallel == 1:
+        ok = True
+        for m in args.modules:
+            ok = ok and testrig.run(m, CACHE_DIR, clean_build=args.clean_build)
+    else:
+        import joblib
+        r = joblib.Parallel(n_jobs=args.parallel)(
+            joblib.delayed(testrig.run)(m, CACHE_DIR, clean_build=args.clean_build, log_prefix=True)
+            for m in args.modules)
+        ok = all(r)
 
-    log = os.path.join(CACHE_DIR, 'test.log')
-    print("Logging to %r" % (log,), file=sys.stderr)
-
-    import testrig
-    testrig.run(args.modules, log=log)
+    if not ok:
+        sys.exit(2)
+    else:
+        sys.exit(0)
 
 if __name__ == "__main__":
     main()
