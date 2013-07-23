@@ -1,10 +1,15 @@
+import textwrap
 from .common import get_git_sources
 
 def _check(fixture, numpyver, scipyver):
     fixture.pip_install("nose")
     fixture.git_install(get_git_sources([numpyver, scipyver]))
     fixture.pip_install("scikit-learn")
-    fixture.run_numpytest("sklearn")
+    fixture.run_python_code(textwrap.dedent("""
+    import sys
+    import sklearn as t
+    sys.exit(int(not t.test('full').wasSuccessful()))
+    """))
 
 def test_numpy_dev_scipy_rel(fixture):
     """Scikit-learn (released) on Numpy (dev version) and Scipy (released)"""

@@ -105,13 +105,6 @@ class Fixture(object):
         cmd = [os.path.join(self.env_dir, 'bin', 'pip')] + cmd
         return self.run_python_script(cmd)
 
-    def run_numpytest(self, module):
-        self.run_python_code(textwrap.dedent("""
-        import sys
-        import %s as t
-        sys.exit(int(not t.test('full', raise_warnings=()).wasSuccessful()))
-        """) % (module,))
-
     def pip_install(self, requirements):
         parts = [x.strip() for x in requirements.splitlines()
                  if x.strip()]
