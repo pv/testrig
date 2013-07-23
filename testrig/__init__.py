@@ -109,7 +109,7 @@ class Fixture(object):
         self.run_python_code(textwrap.dedent("""
         import sys
         import %s as t
-        sys.exit(int(not t.test('full').wasSuccessful()))
+        sys.exit(int(not t.test('full', raise_warnings=()).wasSuccessful()))
         """) % (module,))
 
     def pip_install(self, requirements):
