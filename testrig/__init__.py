@@ -8,6 +8,9 @@ import textwrap
 import subprocess
 import virtualenv
 import pkgutil
+import multiprocessing
+
+PARALLEL_LOCK = multiprocessing.Lock()
 
 class Fixture(object):
     """
@@ -30,12 +33,13 @@ class Fixture(object):
 
     """
 
-    def __init__(self, name, cache_dir, log_fn, clean_build=True, log_prefix=False):
+    def __init__(self, name, cache_dir, log_fn, repo_cache_dir, clean_build=True, log_prefix=False):
         self.name = name
         self.log = open(log_fn, 'wb')
         self.log_fn = log_fn
         self.log_prefix = log_prefix
         self.clean_build = clean_build
+        self.repo_cache_dir = repo_cache_dir
         self.download_dir = os.path.join(cache_dir, 'download')
         self.env_dir = os.path.join(cache_dir, 'env')
         self.code_dir = os.path.join(cache_dir, 'code')
@@ -115,11 +119,22 @@ class Fixture(object):
             setup_py = 'setup.py'
 
         repo = self.get_repo(module)
+        cached_repo = self.get_cached_repo(module)
+
+        PARALLEL_LOCK.acquire()
+        try:
+            if not os.path.isdir(cached_repo):
+                self.run_cmd(['git', 'clone', '--bare', src_repo, cached_repo])
+            else:
+                self.run_cmd(['git', 'fetch', src_repo], cwd=cached_repo)
+        finally:
+            PARALLEL_LOCK.release()
 
         if not os.path.isdir(repo):
-            self.run_cmd(['git', 'clone', src_repo, repo])
+            self.run_cmd(['git', 'clone', '--reference', cached_repo, src_repo, repo])
+        else:
+            self.run_cmd(['git', 'fetch', 'origin'], cwd=repo)
 
-        self.run_cmd(['git', 'fetch', 'origin'], cwd=repo)
         self.run_cmd(['git', 'reset', '--hard', 'origin/' + branch], cwd=repo)
         if self.clean_build:
             self.run_cmd(['git', 'clean', '-f', '-d', '-x'], cwd=repo)
@@ -128,6 +143,9 @@ class Fixture(object):
 
     def get_repo(self, module):
         return os.path.join(self.code_dir, module)
+
+    def get_cached_repo(self, module):
+        return os.path.join(self.repo_cache_dir, module)
 
     def print_header(self, name):
         msg = ""
@@ -184,11 +202,19 @@ def run(name, base_dir, clean_build=True, log_prefix=False):
     if not os.path.isdir(cache_dir):
         os.makedirs(cache_dir)
 
-    log_fn = os.path.join(cache_dir, 'test-%s.log' % name)
+    repo_cache_dir = os.path.join(base_dir, 'git-cache')
+    try:
+        os.makedirs(repo_cache_dir)
+    except OSError:
+        # probably already exists
+        pass
+
+    log_fn = os.path.join(base_dir, 'test-%s.log' % name)
     fixture = Fixture(name,
                       cache_dir=cache_dir, log_fn=log_fn,
                       clean_build=clean_build,
-                      log_prefix=log_prefix)
+                      log_prefix=log_prefix,
+                      repo_cache_dir=repo_cache_dir)
     fixture.print_header(name)
     try:
         fixture.setup()
