@@ -147,7 +147,7 @@ class Fixture(object):
         else:
             self.run_cmd(['git', 'fetch', 'origin'], cwd=repo)
 
-        self.run_cmd(['git', 'reset', '--hard', 'origin/' + branch], cwd=repo)
+        self.run_cmd(['git', 'reset', '--hard', branch], cwd=repo)
         if self.cleanup:
             self.run_cmd(['git', 'clean', '-f', '-d', '-x'], cwd=repo)
 
@@ -249,7 +249,7 @@ def run(test, base_dir, cleanup=True, log_prefix=False):
             test.func(fixture)
             fixture.print("OK")
             return True
-        except Exception as exc:
+        except BaseException as exc:
             import traceback
             fixture.print(traceback.format_exc())
             if isinstance(exc, AssertionError):
