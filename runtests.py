@@ -11,6 +11,7 @@ import os
 import sys
 import argparse
 import testrig
+import fnmatch
 
 CACHE_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'cache')
 
@@ -36,19 +37,26 @@ def main():
     p.add_argument('--parallel', '-p', action="store", dest="parallel",
                    type=int, default=1, metavar="N",
                    help="run N tests in parallel")
-    p.add_argument('tests', nargs='*', default=None, help="tests to run")
+    p.add_argument('tests', nargs='*', default=[], metavar='TESTS',
+                   help="Tests to run. Can also be a glob pattern, e.g., '*scipy_dev*'")
     args = p.parse_args()
 
     # Grab selected tests
-    if args.tests is None:
+    if not args.tests:
         selected_tests = tests.values()
     else:
         selected_tests = []
-        for name in args.tests:
-            try:
-                selected_tests.append(tests[name])
-            except KeyError:
-                p.error("No test %r exists" % (name,))
+        for t in tests.values():
+            for sel in args.tests:
+                if fnmatch.fnmatch(t.name, sel):
+                    selected_tests.append(t)
+                    break
+
+    selected_tests.sort(key=lambda t: t.name)
+    print("Going to run:")
+    for t in selected_tests:
+        print("- %s" % (t.name,))
+    print("")
 
     # Run
     if args.parallel == 1:
@@ -65,11 +73,11 @@ def main():
     print("\n"
           "Summary\n"
           "-------\n")
-    for m, ok in zip(args.modules, r):
+    for t, ok in zip(selected_tests, r):
         if ok:
-            print("- %s: OK" % m)
+            print("- %s: OK" % (t.name,))
         else:
-            print("- %s: FAIL" % m)
+            print("- %s: FAIL" % (t.name,))
     print("")
 
     # Done.
