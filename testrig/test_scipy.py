@@ -1,9 +1,13 @@
-GIT_SOURCES = [
-    ('numpy', 'git://github.com/numpy/numpy.git', 'master'),
-    ('scipy', 'git://github.com/scipy/scipy.git', 'master')
-]
+from .common import get_git_sources
 
-def run(fixture):
+def test_scipy_dev(fixture):
+    """Scipy (dev version) on Numpy (dev version)"""
     fixture.pip_install("nose")
-    fixture.git_install(GIT_SOURCES)
+    fixture.git_install(get_git_sources(["numpy-dev", "scipy-dev"]))
+    fixture.run_numpytest("scipy")
+
+def test_scipy_rel(fixture):
+    """Scipy (released) on Numpy (dev version)"""
+    fixture.pip_install("nose")
+    fixture.git_install(get_git_sources(["numpy-dev", "scipy-rel"]))
     fixture.run_numpytest("scipy")
