@@ -38,20 +38,25 @@ def main():
     args = p.parse_args()
 
     if args.parallel == 1:
-        ok = True
+        r = []
         for m in args.modules:
-            ok = ok and testrig.run(m, CACHE_DIR, clean_build=args.clean_build)
+            r.append(testrig.run(m, CACHE_DIR, clean_build=args.clean_build))
     else:
         import joblib
         r = joblib.Parallel(n_jobs=args.parallel)(
             joblib.delayed(testrig.run)(m, CACHE_DIR, clean_build=args.clean_build, log_prefix=True)
             for m in args.modules)
-        ok = all(r)
 
-    if not ok:
-        sys.exit(2)
-    else:
-        sys.exit(0)
+    print("\n"
+          "Summary\n"
+          "-------\n")
+    for m, ok in zip(args.modules, r):
+        if ok:
+            print("- %s: OK" % m)
+        else:
+            print("- %s: FAIL" % m)
+
+    sys.exit(sum(map(int, r)))
 
 if __name__ == "__main__":
     main()
