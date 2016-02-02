@@ -65,6 +65,9 @@ def main():
     # Run
     set_extra_env()
 
+    if not EXTRA_PATH[0]:
+        print("WARNING: ccache is not available -- this is going to be slow\n")
+
     cache_dir = CACHE_DIR
     try:
         os.makedirs(cache_dir)
@@ -90,10 +93,10 @@ def main():
     for t, entry in zip(selected_tests, results):
         num, num_new_fail, num_old_fail = entry
         if num_new_fail == 0:
-            print("- {0}: OK (ran {1} tests, {2} old failures)" % (t.name, num, num_old_fail))
+            print("- {0}: OK (ran {1} tests, {2} old failures)".format(t.name, num, num_old_fail))
             ok = False
         else:
-            print("- {0}: FAIL (ran {1} tests, {2} new failures, {3} old failures)" % (t.name, num, num_new_fail, num_old_fail))
+            print("- {0}: FAIL (ran {1} tests, {2} new failures, {3} old failures)".format(t.name, num, num_new_fail, num_old_fail))
     print("")
 
     # Done
@@ -113,7 +116,7 @@ def get_tests(config):
     """
     p = configparser.RawConfigParser()
     if not p.read(config):
-        print("ERROR: configuration file %r not found" % (config,))
+        print("ERROR: configuration file {0} not found".format(config))
         sys.exit(1)
 
     tests = []
@@ -178,7 +181,7 @@ class Test(object):
                                              (log_new_fn, test_log_new_fn, self.new_install)):
             fixture = Fixture(cache_dir, log_fn,
                               cleanup=cleanup, git_cache=git_cache)
-            fixture.print("Logging into: %r" % os.path.relpath(log_fn))
+            fixture.print("Logging into: {0}".format(os.path.relpath(log_fn)))
             try:
                 wait_printer.set_log_file(log_fn)
                 try:
@@ -190,7 +193,7 @@ class Test(object):
                         print(f.read(), file=sys.stderr)
                     raise
 
-                fixture.print("Logging into: %r" % os.path.relpath(test_log_fn))
+                fixture.print("Logging into: {0}".format(os.path.relpath(test_log_fn)))
                 with open(test_log_fn, 'wb') as f:
                     wait_printer.set_log_file(test_log_fn)
                     fixture.run_test_cmd(self.run_cmd, log=f)

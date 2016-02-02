@@ -117,7 +117,7 @@ sysconfig.get_python_inc = _xx_get_python_inc
         try:
             p.communicate()
             if p.returncode != 0:
-                raise RuntimeError("Failed to run %r (see log)" % (cmd,))
+                raise RuntimeError("Failed to run {0} (see log)".format(cmd))
         except:
             if p.returncode is None:
                 p.terminate()
