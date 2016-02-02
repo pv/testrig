@@ -275,6 +275,7 @@ class Test(object):
             fixture = Fixture(cache_dir, log, print_logged=print_logged,
                               cleanup=cleanup, git_cache=git_cache, verbose=verbose)
             try:
+                # Run virtualenv setup + builds
                 wait_printer.set_log_file(log_fn)
                 try:
                     print_logged("{0}: setting up virtualenv at {1}...".format(
@@ -299,12 +300,16 @@ class Test(object):
                     else:
                         return -1, -1, -1
 
+                info = fixture.get_info()
+                fixture.print("{0}: installed {1}".format(self.name, info))
+
+                # Run tests
                 fixture.print("{0}: running tests (logging to {1})...".format(self.name, os.path.relpath(test_log_fn)))
                 with text_open(test_log_fn, 'w') as f:
                     wait_printer.set_log_file(test_log_fn)
                     fixture.run_test_cmd(self.run_cmd, log=f)
 
-                # Parse result
+                # Parse test results
                 with text_open(test_log_fn, 'r') as f:
                     data = f.read()
                     fail, count, err_msg = self.parser(data, os.path.join(cache_dir, 'env'))

@@ -113,6 +113,12 @@ sysconfig.get_python_inc = _xx_get_python_inc
                 if os.path.isdir(d):
                     shutil.rmtree(d)
 
+    def get_info(self):
+        cmd = [os.path.join(self.env_dir, 'bin', 'pip'), 'freeze']
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        out, err = p.communicate()
+        return " ".join(sorted(out.split()))
+
     def run_cmd(self, cmd, **kwargs):
         msg = " ".join(os.path.relpath(x) if os.path.exists(x) else x for x in cmd)
         if kwargs.get('cwd', None) is not None and os.path.relpath(kwargs['cwd']) != '.':
