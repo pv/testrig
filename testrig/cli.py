@@ -283,22 +283,23 @@ class Test(object):
                 with open(test_log_fn, 'wb') as f:
                     wait_printer.set_log_file(test_log_fn)
                     fixture.run_test_cmd(self.run_cmd, log=f)
+
+                # Parse result
+                with io.open(test_log_fn, 'r', encoding='utf-8', errors='replace') as f:
+                    data = f.read()
+                    fail, count, err_msg = self.parser(data, os.path.join(cache_dir, 'env'))
+                    test_count.append(count)
+                    failures.append(fail)
+
+                    if err_msg is not None:
+                        msg = "{0}: ERROR: failed to parse test output\n".format(self.name)
+                        msg += "{0}: {1}\n".format(self.name, err_msg)
+                        msg += "    " + data.replace("\n", "\n    ")
+                        print_logged(msg)
+                        return -1, -1, -1
             finally:
                 wait_printer.set_log_file(None)
                 fixture.teardown()
-
-            with io.open(test_log_fn, 'r', encoding='utf-8', errors='replace') as f:
-                data = f.read()
-                fail, count, err_msg = self.parser(data, os.path.join(cache_dir, 'env'))
-                test_count.append(count)
-                failures.append(fail)
-
-                if err_msg is not None:
-                    msg = "{0}: ERROR: failed to parse test output\n".format(self.name)
-                    msg += "{0}: {1}\n".format(self.name, err_msg)
-                    msg += "    " + data.replace("\n", "\n    ")
-                    print_logged(msg)
-                    return -1, -1, -1
 
         wait_printer.stop()
 
