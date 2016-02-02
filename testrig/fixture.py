@@ -44,6 +44,7 @@ class Fixture(object):
         self.cleanup = cleanup
         self.git_cache = git_cache
         self.verbose = verbose
+
         if print_logged is None:
             self._print = print
         else:
@@ -119,16 +120,18 @@ sysconfig.get_python_inc = _xx_get_python_inc
         out, err = p.communicate()
         return " ".join(sorted(out.split()))
 
-    def run_cmd(self, cmd, **kwargs):
+    def run_cmd(self, cmd, cwd=None):
         msg = " ".join(os.path.relpath(x) if os.path.exists(x) else x for x in cmd)
-        if kwargs.get('cwd', None) is not None and os.path.relpath(kwargs['cwd']) != '.':
-            msg = '(cd %r && %s)' % (os.path.relpath(kwargs['cwd']), msg)
+        if cwd is not None and os.path.relpath(cwd) != '.':
+            msg = '(cd %r && %s)' % (os.path.relpath(cwd), msg)
         msg = '$ ' + msg
 
         self.print(msg, level=1)
 
-        p = subprocess.Popen(cmd, stdout=self.log, stderr=subprocess.STDOUT,
-                             **kwargs)
+        env = dict(os.environ)
+        env['CCACHE_BASEDIR'] = self.env_dir
+
+        p = subprocess.Popen(cmd, stdout=self.log, stderr=subprocess.STDOUT, cwd=cwd, env=env)
         try:
             p.communicate()
             if p.returncode != 0:
@@ -152,9 +155,9 @@ sysconfig.get_python_inc = _xx_get_python_inc
                 p.terminate()
             raise
 
-    def run_python_script(self, cmd, **kwargs):
+    def run_python_script(self, cmd, cwd=None):
         cmd = [os.path.join(self.env_dir, 'bin', 'python')] + cmd
-        self.run_cmd(cmd, **kwargs)
+        self.run_cmd(cmd, cwd=cwd)
 
     def run_pip(self, cmd, cwd=None):
         cmd = [os.path.join(self.env_dir, 'bin', 'pip')] + cmd
