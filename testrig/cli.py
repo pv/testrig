@@ -32,8 +32,12 @@ EXTRA_PATH = [
     '/usr/local/lib/f90cache'
 ]
 
+LOG_STREAM = None
+
 
 def main():
+    global LOG_STREAM
+
     # Parse arguments
     p = argparse.ArgumentParser(usage=__doc__.lstrip())
     p.add_argument('--no-git-cache', '-g', action="store_false",
@@ -65,17 +69,19 @@ def main():
                     break
 
     # Run
-    set_extra_env()
-
-    if not EXTRA_PATH[0]:
-        print("WARNING: ccache is not available -- this is going to be slow\n")
-
     cache_dir = CACHE_DIR
     try:
         os.makedirs(cache_dir)
     except OSError:
         # probably already exists
         pass
+
+    LOG_STREAM = open(os.path.join(cache_dir, 'testrig.log'), 'wb')
+
+    set_extra_env()
+
+    if not EXTRA_PATH[0]:
+        print_logged("WARNING: ccache is not available -- this is going to be slow\n")
 
     results = []
 
@@ -90,25 +96,33 @@ def main():
     msg += ("="*79) + "\n"
     msg += "Summary\n"
     msg += ("="*79) + "\n"
-    print(msg)
+    print_logged(msg)
     ok = True
     for t, entry in zip(selected_tests, results):
         num, num_new_fail, num_old_fail = entry
         if num_new_fail == 0:
-            print("- {0}: OK (ran {1} tests, {2} pre-existing failures)".format(t.name, num, num_old_fail))
+            print_logged("- {0}: OK (ran {1} tests, {2} pre-existing failures)".format(t.name, num, num_old_fail))
             ok = False
         elif num_new_fail < 0:
-            print("- {0}: ERROR".format(t.name))
+            print_logged("- {0}: ERROR".format(t.name))
             ok = False
         else:
-            print("- {0}: FAIL (ran {1} tests, {2} new failures, {3} pre-existing failures)".format(t.name, num, num_new_fail, num_old_fail))
-    print("")
+            print_logged("- {0}: FAIL (ran {1} tests, {2} new failures, {3} pre-existing failures)".format(t.name, num, num_new_fail, num_old_fail))
+    print_logged("")
 
     # Done
     if ok:
         sys.exit(0)
     else:
         sys.exit(1)
+
+
+def print_logged(*a):
+    assert LOG_STREAM is not None
+    print(*a)
+    sys.stdout.flush()
+    print(*a, file=LOG_STREAM)
+    LOG_STREAM.flush()
 
 
 def set_extra_env():
@@ -121,7 +135,7 @@ def get_tests(config):
     """
     p = configparser.RawConfigParser()
     if not p.read(config):
-        print("ERROR: configuration file {0} not found".format(config))
+        print_logged("ERROR: configuration file {0} not found".format(config))
         sys.exit(1)
 
     tests = []
@@ -145,7 +159,7 @@ def get_tests(config):
                      get(section, 'parser'))
             tests.append(t)
         except (ValueError, configparser.Error) as err:
-            print("testrig.ini: section {}: {}".format(section, err))
+            print_logged("testrig.ini: section {}: {}".format(section, err))
             sys.exit(1)
 
     return tests
@@ -161,18 +175,16 @@ class Test(object):
         self.parser_name = parser
         self.parser = get_parser(parser)
 
-    def print_info(self, stream=sys.stdout):
-        print(("[{0}]\n"
-               "    base={1}\n"
-               "    old={2}\n"
-               "    new={3}\n"
-               "    run={4}\n"
-               "    parser={5}\n"
-               ).format(self.name, " ".join(self.base_install),
-                        " ".join(self.old_install), " ".join(self.new_install),
-                        self.run_cmd, self.parser_name),
-              file=stream)
-        stream.flush()
+    def print_info(self):
+        print_logged(("[{0}]\n"
+                      "    base={1}\n"
+                      "    old={2}\n"
+                      "    new={3}\n"
+                      "    run={4}\n"
+                      "    parser={5}\n"
+                      ).format(self.name, " ".join(self.base_install),
+                               " ".join(self.old_install), " ".join(self.new_install),
+                               self.run_cmd, self.parser_name))
 
     def run(self, cache_dir, cleanup=True, git_cache=True, verbose=False):
         log_old_fn = os.path.join(cache_dir, '%s-build-old.log' % self.name)
@@ -193,12 +205,12 @@ class Test(object):
         msg += "="*79 + "\n"
         msg += "{0}: running".format(self.name) + "\n"
         msg += "="*79 + "\n"
-        print(msg)
+        print_logged(msg)
         self.print_info()
 
         for log_fn, test_log_fn, install in ((log_old_fn, test_log_old_fn, self.old_install),
                                              (log_new_fn, test_log_new_fn, self.new_install)):
-            fixture = Fixture(cache_dir, log_fn,
+            fixture = Fixture(cache_dir, log_fn, print_logged=print_logged,
                               cleanup=cleanup, git_cache=git_cache, verbose=verbose)
             try:
                 wait_printer.set_log_file(log_fn)
@@ -209,8 +221,8 @@ class Test(object):
                     fixture.install_spec(self.base_install)
                 except:
                     with open(log_fn, 'rb') as f:
-                        print("ERROR: build failed", file=sys.stderr)
-                        print(f.read(), file=sys.stderr)
+                        print_logged("ERROR: build failed")
+                        print_logged(f.read())
                     return -1, -1, -1
 
                 fixture.print("Running tests (logging to {0})...".format(os.path.relpath(test_log_fn)))
@@ -228,8 +240,8 @@ class Test(object):
                 failures.append(fail)
 
                 if count < 0:
-                    print("ERROR: failed to parse test output", file=sys.stderr)
-                    print(data, file=sys.stderr)
+                    print_logged("ERROR: failed to parse test output")
+                    print_logged(data)
                     return -1, -1, -1
 
         wait_printer.stop()
@@ -246,22 +258,22 @@ class Test(object):
         same_set = new_set.intersection(old_set)
 
         if same_set and verbose:
-            print("\n\n")
-            print("="*79)
-            print("{0}: pre-existing failures".format(self.name))
-            print("="*79)
+            print_logged("\n\n")
+            print_logged("="*79)
+            print_logged("{0}: pre-existing failures".format(self.name))
+            print_logged("="*79)
 
             for k in sorted(same_set):
-                print(new[k])
+                print_logged(new[k])
 
         if added_set:
-            print("\n\n")
-            print("="*79)
-            print("{0}: new failures".format(self.name))
-            print("="*79)
+            print_logged("\n\n")
+            print_logged("="*79)
+            print_logged("{0}: new failures".format(self.name))
+            print_logged("="*79)
 
             for k in sorted(added_set):
-                print(new[k])
+                print_logged(new[k])
 
         return test_count[1], len(added_set), len(same_set)
         

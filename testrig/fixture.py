@@ -35,12 +35,16 @@ class Fixture(object):
 
     """
 
-    def __init__(self, cache_dir, log_fn, cleanup=True, git_cache=True, verbose=False):
+    def __init__(self, cache_dir, log_fn, print_logged=None, cleanup=True, git_cache=True, verbose=False):
         self.log = open(log_fn, 'wb')
         self.log_fn = os.path.abspath(log_fn)
         self.cleanup = cleanup
         self.git_cache = git_cache
         self.verbose = verbose
+        if print_logged is None:
+            self._print = print
+        else:
+            self._print = print_logged
 
         self.cache_dir = os.path.abspath(cache_dir)
 
@@ -223,7 +227,6 @@ sysconfig.get_python_inc = _xx_get_python_inc
 
     def print(self, msg, level=0):
         if self.verbose or level == 0:
-            print(msg, file=sys.stderr)
-            sys.stderr.flush()
+            self._print(msg)
         print(msg, file=self.log)
         self.log.flush()

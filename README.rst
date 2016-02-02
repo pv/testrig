@@ -42,5 +42,16 @@ The configuration items in each section are:
   after those specified by ``old`` or ``new``.
 * ``run``: command that runs the tests.
 * ``parser``: parser for the test output. Available options:
+
   - ``nose``: parses nose stdout
   - ``pytest-log``: parses contents from ``py.test --result-log=pytest.log ...``
+
+Usage
+-----
+
+Run::
+
+    python run.py --help
+    python run.py $TESTENV
+
+The runs may take a long time, as it builds everything from source.
