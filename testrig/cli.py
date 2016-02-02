@@ -158,8 +158,21 @@ class Test(object):
         self.old_install = old_install.split()
         self.new_install = new_install.split()
         self.run_cmd = run_cmd
+        self.parser_name = parser
         self.parser = get_parser(parser)
 
+    def print_info(self, stream=sys.stdout):
+        print(("[{0}]\n"
+               "    base={1}\n"
+               "    old={2}\n"
+               "    new={3}\n"
+               "    run={4}\n"
+               "    parser={5}\n"
+               ).format(self.name, " ".join(self.base_install),
+                        " ".join(self.old_install), " ".join(self.new_install),
+                        self.run_cmd, self.parser_name),
+              file=stream)
+        stream.flush()
 
     def run(self, cache_dir, cleanup=True, git_cache=True, verbose=False):
         log_old_fn = os.path.join(cache_dir, '%s-build-old.log' % self.name)
@@ -180,7 +193,8 @@ class Test(object):
         msg += "="*79 + "\n"
         msg += "{0}: running".format(self.name) + "\n"
         msg += "="*79 + "\n"
-        print(msg, file=sys.stderr)
+        print(msg)
+        self.print_info()
 
         for log_fn, test_log_fn, install in ((log_old_fn, test_log_old_fn, self.old_install),
                                              (log_new_fn, test_log_new_fn, self.new_install)):
@@ -195,6 +209,7 @@ class Test(object):
                     fixture.install_spec(self.base_install)
                 except:
                     with open(log_fn, 'rb') as f:
+                        print("ERROR: build failed", file=sys.stderr)
                         print(f.read(), file=sys.stderr)
                     return -1, -1, -1
 
