@@ -84,7 +84,7 @@ def main():
             results.append(r)
 
     # Output summary
-    msg = ""
+    msg = "\n\n"
     msg += ("="*79) + "\n"
     msg += "Summary\n"
     msg += ("="*79) + "\n"
@@ -93,10 +93,13 @@ def main():
     for t, entry in zip(selected_tests, results):
         num, num_new_fail, num_old_fail = entry
         if num_new_fail == 0:
-            print("- {0}: OK (ran {1} tests, {2} old failures)".format(t.name, num, num_old_fail))
+            print("- {0}: OK (ran {1} tests, {2} pre-existing failures)".format(t.name, num, num_old_fail))
+            ok = False
+        elif num_new_fail < 0:
+            print("- {0}: ERROR".format(t.name))
             ok = False
         else:
-            print("- {0}: FAIL (ran {1} tests, {2} new failures, {3} old failures)".format(t.name, num, num_new_fail, num_old_fail))
+            print("- {0}: FAIL (ran {1} tests, {2} new failures, {3} pre-existing failures)".format(t.name, num, num_new_fail, num_old_fail))
     print("")
 
     # Done
@@ -191,7 +194,7 @@ class Test(object):
                 except:
                     with open(log_fn, 'rb') as f:
                         print(f.read(), file=sys.stderr)
-                    raise
+                    return -1, -1, -1
 
                 fixture.print("Logging into: {0}".format(os.path.relpath(test_log_fn)))
                 with open(test_log_fn, 'wb') as f:
@@ -210,6 +213,7 @@ class Test(object):
                 if count < 0:
                     print("ERROR: failed to parse test output", file=sys.stderr)
                     print(data, file=sys.stderr)
+                    return -1, -1, -1
 
         wait_printer.stop()
 
@@ -219,27 +223,30 @@ class Test(object):
         old, new = failures
 
         old_set = set(old.keys())
-        new_set = set(new.keys()) - old_set
+        new_set = set(new.keys())
 
-        if old:
+        added_set = new_set - old_set
+        same_set = new_set.intersection(old_set)
+
+        if same_set:
             print("\n\n")
             print("="*79)
-            print("{0}: old failures".format(self.name))
+            print("{0}: pre-existing failures".format(self.name))
             print("="*79)
 
-            for name, msg in sorted(old.items()):
-                print(msg)
+            for k in sorted(same_set):
+                print(new[k])
 
-        if new_set:
+        if added_set:
             print("\n\n")
             print("="*79)
             print("{0}: new failures".format(self.name))
             print("="*79)
 
-            for k in sorted(new_set):
+            for k in sorted(added_set):
                 print(new[k])
 
-        return test_count[1], len(new_set), len(old)
+        return test_count[1], len(added_set), len(same_set)
         
 
 class WaitPrinter(object):
