@@ -275,7 +275,7 @@ class Test(object):
                 except:
                     with open(log_fn, 'rb') as f:
                         msg = "{0}: ERROR: build failed\n".format(self.name)
-                        msg += f.read()
+                        msg += "    " + f.read().replace("\n", "\n    ")
                         print_logged(msg)
                     return -1, -1, -1
 
@@ -289,13 +289,14 @@ class Test(object):
 
             with io.open(test_log_fn, 'r', encoding='utf-8', errors='replace') as f:
                 data = f.read()
-                fail, count = self.parser(data, os.path.join(cache_dir, 'env'))
+                fail, count, err_msg = self.parser(data, os.path.join(cache_dir, 'env'))
                 test_count.append(count)
                 failures.append(fail)
 
-                if count < 0:
-                    msg = "{0}: ERROR: failed to parse test output".format(self.name)
-                    msg += data
+                if err_msg is not None:
+                    msg = "{0}: ERROR: failed to parse test output\n".format(self.name)
+                    msg += "{0}: {1}\n".format(self.name, err_msg)
+                    msg += "    " + data.replace("\n", "\n    ")
                     print_logged(msg)
                     return -1, -1, -1
 

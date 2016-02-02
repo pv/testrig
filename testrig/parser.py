@@ -50,15 +50,19 @@ def parse_nose(text, cwd):
             message.append(line)
             continue
 
-    return failures, test_count
+    if test_count < 0:
+        err_msg = "ERROR: parsing nose output failed"
+    else:
+        err_msg = None
+
+    return failures, test_count, err_msg
 
 
 def parse_pytest_log(text, cwd):
     log_fn = os.path.join(cwd, 'pytest.log')
 
     if not os.path.isfile(log_fn):
-        print("ERROR: log file 'pytest.log' not found", file=sys.stderr)
-        return {}, -1
+        return {}, -1, "ERROR: log file 'pytest.log' not found"
 
     failures = {}
     test_count = 0
@@ -87,8 +91,8 @@ def parse_pytest_log(text, cwd):
     for key in list(failures.keys()):
         failures[key] = "\n".join(failures[key])
 
-    return failures, test_count
-    
+    return failures, test_count, None
+
 
 def get_parser(name):
     parsers = {'nose': parse_nose,
