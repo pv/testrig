@@ -16,6 +16,9 @@ avoid drinking too much coffee.
 
 Currently, this is POSIX-only, and tested only on Linux.
 
+See `Travis-CI <https://travis-ci.org/pv/testrig/>`__ for most recent
+results for Numpy master vs 1.7.2.
+
 Configuration
 -------------
 
