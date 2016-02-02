@@ -132,20 +132,21 @@ def main():
     msg = "\n\n"
     msg += ("="*79) + "\n"
     msg += "Summary\n"
-    msg += ("="*79) + "\n"
-    print_logged(msg)
+    msg += ("="*79) + "\n\n"
     ok = True
     for name, entry in sorted(results.items()):
         num, num_new_fail, num_old_fail = entry
         if num_new_fail == 0:
-            print_logged("- {0}: OK (ran {1} tests, {2} pre-existing failures)".format(name, num, num_old_fail))
+            msg += "- {0}: OK (ran {1} tests, {2} pre-existing failures)\n".format(name, num, num_old_fail)
         elif num_new_fail < 0:
-            print_logged("- {0}: ERROR".format(name))
+            msg += "- {0}: ERROR\n".format(name)
             ok = False
         else:
             ok = False
-            print_logged("- {0}: FAIL (ran {1} tests, {2} new failures, {3} pre-existing failures)".format(name, num, num_new_fail, num_old_fail))
-    print_logged("")
+            msg += "- {0}: FAIL (ran {1} tests, {2} new failures, {3} pre-existing failures)\n".format(name, num, num_new_fail, num_old_fail)
+    msg += "\n"
+
+    print_logged(msg)
 
     # Done
     if ok:
@@ -273,9 +274,9 @@ class Test(object):
                     fixture.install_spec(self.base_install)
                 except:
                     with open(log_fn, 'rb') as f:
-                        print_logged("{0}: ERROR: build failed".format(self.name))
-                        print_logged(f.read())
-                    raise
+                        msg = "{0}: ERROR: build failed\n".format(self.name)
+                        msg += f.read()
+                        print_logged(msg)
                     return -1, -1, -1
 
                 fixture.print("{0}: running tests (logging to {1})...".format(self.name, os.path.relpath(test_log_fn)))
@@ -293,8 +294,9 @@ class Test(object):
                 failures.append(fail)
 
                 if count < 0:
-                    print_logged("ERROR: failed to parse test output")
-                    print_logged(data)
+                    msg = "{0}: ERROR: failed to parse test output".format(self.name)
+                    msg += data
+                    print_logged(msg)
                     return -1, -1, -1
 
         wait_printer.stop()
