@@ -105,9 +105,9 @@ sysconfig.get_python_inc = _xx_get_python_inc
                     shutil.rmtree(d)
 
     def run_cmd(self, cmd, **kwargs):
-        msg = (' '.join(x if ' ' not in x else '"%s"' % x.replace('"', '\\"') for x in cmd))
-        if kwargs.get('cwd', None) is not None:
-            msg = '(cd %r && %s)' % (kwargs['cwd'], msg)
+        msg = " ".join(os.path.relpath(x) if os.path.exists(x) else x for x in cmd)
+        if kwargs.get('cwd', None) is not None and os.path.relpath(kwargs['cwd']) != '.':
+            msg = '(cd %r && %s)' % (os.path.relpath(kwargs['cwd']), msg)
         msg = '$ ' + msg
 
         self.print(msg)
@@ -126,7 +126,7 @@ sysconfig.get_python_inc = _xx_get_python_inc
     def run_test_cmd(self, cmd, log):
         cmd = ". bin/activate; " + cmd
 
-        self.print("$ " + cmd)
+        self.print("$ cd cache/env; " + cmd)
 
         p = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT, shell=True,
                              cwd=self.env_dir)

@@ -34,22 +34,22 @@ EXTRA_PATH = [
 
 
 def main():
-    tests = get_tests()
-    test_info = "\n  ".join("%-16s" % (t.name,) for t in sorted(tests))
-    usage = __doc__.lstrip()
-    usage += "\navailable tests (testrig.ini):\n  " + test_info
-
     # Parse arguments
-    p = argparse.ArgumentParser(usage=usage)
+    p = argparse.ArgumentParser(usage=__doc__.lstrip())
     p.add_argument('--no-git-cache', '-g', action="store_false",
                    dest="git_cache", default=True,
                    help="don't cache git repositories")
     p.add_argument('--no-cleanup', '-n', action="store_false",
                    dest="cleanup", default=True,
                    help="don't clean up before or after")
+    p.add_argument('--config', action="store",
+                   dest="config", default='testrig.ini',
+                   help="configuration file")
     p.add_argument('tests', nargs='*', default=[], metavar='TESTS',
                    help="Tests to run. Can also be a glob pattern, e.g., '*scipy_dev*'")
     args = p.parse_args()
+
+    tests = get_tests(args.config)
 
     # Grab selected tests
     if not args.tests:
@@ -107,12 +107,14 @@ def set_extra_env():
     os.environ['PATH'] = os.pathsep.join(EXTRA_PATH + os.environ.get('PATH', '').split(os.pathsep))
 
 
-def get_tests():
+def get_tests(config):
     """
     Parse testrig.ini and return a list of Test objects.
     """
     p = configparser.RawConfigParser()
-    p.read(os.path.join(os.path.dirname(__file__), '..', 'testrig.ini'))
+    if not p.read(config):
+        print("ERROR: configuration file %r not found" % (config,))
+        sys.exit(1)
 
     tests = []
 
@@ -176,7 +178,7 @@ class Test(object):
                                              (log_new_fn, test_log_new_fn, self.new_install)):
             fixture = Fixture(cache_dir, log_fn,
                               cleanup=cleanup, git_cache=git_cache)
-            fixture.print("Logging into: %r" % log_fn)
+            fixture.print("Logging into: %r" % os.path.relpath(log_fn))
             try:
                 wait_printer.set_log_file(log_fn)
                 try:
@@ -188,7 +190,7 @@ class Test(object):
                         print(f.read(), file=sys.stderr)
                     raise
 
-                fixture.print("Logging into: %r" % test_log_fn)
+                fixture.print("Logging into: %r" % os.path.relpath(test_log_fn))
                 with open(test_log_fn, 'wb') as f:
                     wait_printer.set_log_file(test_log_fn)
                     fixture.run_test_cmd(self.run_cmd, log=f)
@@ -234,7 +236,7 @@ class Test(object):
             for k in sorted(new_set):
                 print(new[k])
 
-        return not new_set, test_count[1], len(new), len(old)
+        return test_count[1], len(new_set), len(old)
         
 
 class WaitPrinter(object):
