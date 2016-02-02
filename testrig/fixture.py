@@ -39,9 +39,8 @@ class Fixture(object):
 
     """
 
-    def __init__(self, cache_dir, log_fn, print_logged=None, cleanup=True, git_cache=True, verbose=False):
-        self.log = open(log_fn, 'wb')
-        self.log_fn = os.path.abspath(log_fn)
+    def __init__(self, cache_dir, log, print_logged=None, cleanup=True, git_cache=True, verbose=False):
+        self.log = log
         self.cleanup = cleanup
         self.git_cache = git_cache
         self.verbose = verbose

@@ -9,7 +9,6 @@ from __future__ import absolute_import, division, print_function
 
 import os
 import sys
-import io
 import time
 import fnmatch
 import argparse
@@ -92,9 +91,9 @@ def main():
         pass
 
     log_fn = os.path.join(cache_dir, 'testrig.log')
-    with open(log_fn, 'wb'):
+    with text_open(log_fn, 'w'):
         pass
-    LOG_STREAM = open(log_fn, 'a')
+    LOG_STREAM = text_open(log_fn, 'a')
 
     # Run
     set_extra_env()
@@ -112,21 +111,25 @@ def main():
     if args.parallel < 0:
         args.parallel = multiprocessing.cpu_count() + 1 + args.parallel
 
-    if args.parallel > 0 and joblib is not None:
-        jobs = []
-        os.environ['NPY_NUM_BUILD_JOBS'] = str(max(1, multiprocessing.cpu_count()//min(len(selected_tests), args.parallel)))
-        for t in selected_tests:
-            job_cache_dir = os.path.join(cache_dir, 'parallel', t.name)
-            jobs.append(joblib.delayed(do_run)(t, job_cache_dir, cleanup=args.cleanup, git_cache=args.git_cache, verbose=args.verbose))
-        job_results = joblib.Parallel(n_jobs=args.parallel, backend="threading")(jobs)
-        results = dict(zip([t.name for t in selected_tests], job_results))
-    else:
-        if args.parallel:
-            print_logged("WARNING: joblib not installed -- parallel run not possible\n")
-        os.environ['NPY_NUM_BUILD_JOBS'] = str(multiprocessing.cpu_count())
-        for t in selected_tests:
-            r = do_run(t, cache_dir, cleanup=args.cleanup, git_cache=args.git_cache, verbose=args.verbose)
-            results[t.name] = r
+    try:
+        if args.parallel > 0 and joblib is not None:
+            jobs = []
+            os.environ['NPY_NUM_BUILD_JOBS'] = str(max(1, multiprocessing.cpu_count()//min(len(selected_tests), args.parallel)))
+            for t in selected_tests:
+                job_cache_dir = os.path.join(cache_dir, 'parallel', t.name)
+                jobs.append(joblib.delayed(do_run)(t, job_cache_dir, cleanup=args.cleanup, git_cache=args.git_cache, verbose=args.verbose))
+            job_results = joblib.Parallel(n_jobs=args.parallel, backend="threading")(jobs)
+            results = dict(zip([t.name for t in selected_tests], job_results))
+        else:
+            if args.parallel:
+                print_logged("WARNING: joblib not installed -- parallel run not possible\n")
+            os.environ['NPY_NUM_BUILD_JOBS'] = str(multiprocessing.cpu_count())
+            for t in selected_tests:
+                r = do_run(t, cache_dir, cleanup=args.cleanup, git_cache=args.git_cache, verbose=args.verbose)
+                results[t.name] = r
+    except KeyboardInterrupt:
+        print_logged("Interrupted")
+        sys.exit(1)
 
     # Output summary
     msg = "\n\n"
@@ -153,6 +156,13 @@ def main():
         sys.exit(0)
     else:
         sys.exit(1)
+
+
+def text_open(filename, mode):
+    if sys.version_info[0] >= 3:
+        return open(filename, mode, encoding='utf-8', errors='replace')
+    else:
+        return open(filename, mode)
 
 
 def do_run(test, cache_dir, cleanup, git_cache, verbose):
@@ -261,7 +271,8 @@ class Test(object):
 
         for log_fn, test_log_fn, install in ((log_old_fn, test_log_old_fn, self.old_install),
                                              (log_new_fn, test_log_new_fn, self.new_install)):
-            fixture = Fixture(cache_dir, log_fn, print_logged=print_logged,
+            log = text_open(log_fn, 'w')
+            fixture = Fixture(cache_dir, log, print_logged=print_logged,
                               cleanup=cleanup, git_cache=git_cache, verbose=verbose)
             try:
                 wait_printer.set_log_file(log_fn)
@@ -272,20 +283,22 @@ class Test(object):
                     print_logged("{0}: building (logging to {1})...".format(self.name, os.path.relpath(log_fn)))
                     fixture.install_spec(install)
                     fixture.install_spec(self.base_install)
-                except:
-                    with open(log_fn, 'rb') as f:
-                        msg = "{0}: ERROR: build failed\n".format(self.name)
+                except BaseException as exc:
+                    with text_open(log_fn, 'r') as f:
+                        msg = "{0}: ERROR: build failed: {1}\n".format(self.name, str(exc))
                         msg += "    " + f.read().replace("\n", "\n    ")
                         print_logged(msg)
+                    if isinstance(exc, KeyboardInterrupt):
+                        raise
                     return -1, -1, -1
 
                 fixture.print("{0}: running tests (logging to {1})...".format(self.name, os.path.relpath(test_log_fn)))
-                with open(test_log_fn, 'wb') as f:
+                with text_open(test_log_fn, 'w') as f:
                     wait_printer.set_log_file(test_log_fn)
                     fixture.run_test_cmd(self.run_cmd, log=f)
 
                 # Parse result
-                with io.open(test_log_fn, 'r', encoding='utf-8', errors='replace') as f:
+                with text_open(test_log_fn, 'r') as f:
                     data = f.read()
                     fail, count, err_msg = self.parser(data, os.path.join(cache_dir, 'env'))
                     test_count.append(count)
@@ -300,6 +313,7 @@ class Test(object):
             finally:
                 wait_printer.set_log_file(None)
                 fixture.teardown()
+                log.close()
 
         wait_printer.stop()
 

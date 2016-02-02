@@ -34,13 +34,13 @@ class LockFile(object):
                         os.unlink(self.filename)
                     finally:
                         sublock.release()
-            except OSError, exc:
+            except OSError as exc:
                 pass
 
             try:
                 os.symlink(repr(self.pid), self.filename)
                 break
-            except OSError, exc:
+            except OSError as exc:
                 if exc.errno != 17: raise
 
             if not block:
