@@ -102,11 +102,11 @@ def main():
         num, num_new_fail, num_old_fail = entry
         if num_new_fail == 0:
             print_logged("- {0}: OK (ran {1} tests, {2} pre-existing failures)".format(t.name, num, num_old_fail))
-            ok = False
         elif num_new_fail < 0:
             print_logged("- {0}: ERROR".format(t.name))
             ok = False
         else:
+            ok = False
             print_logged("- {0}: FAIL (ran {1} tests, {2} new failures, {3} pre-existing failures)".format(t.name, num, num_new_fail, num_old_fail))
     print_logged("")
 
