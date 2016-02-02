@@ -7,9 +7,6 @@ matrix:
     - python: 2.7
       env:
         - MODULE=scipy
-    - python: 2.7
-      env:
-        - MODULE=pandas
 addons:
   apt:
     packages:
