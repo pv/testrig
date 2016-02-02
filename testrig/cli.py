@@ -332,7 +332,7 @@ class Test(object):
             msg += "="*79 + "\n"
 
             for k in sorted(added_set):
-                msg += new[k]
+                msg += new[k] + "\n"
 
         print_logged(msg)
 
