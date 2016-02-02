@@ -29,8 +29,19 @@ addons:
 cache:
   directories:
     - $HOME/.ccache
+    - $HOME/.f90cache
     - $HOME/.cache/pip
 script:
+  - |
+    set -e
+    tar xzf ci/f90cache-0.96.tar.gz
+    pushd f90cache-0.96
+    patch -p1 < ../ci/f90cache.patch
+    ./configure --prefix=$HOME/f90cache
+    make install
+    ln -s $HOME/f90cache/bin/f90cache $HOME/f90cache/bin/gfortran
+    popd
+  - export PATH=$HOME/f90cache/bin:$PATH
   - pip install virtualenv
   - python run.py -g $MODULE
 notifications:

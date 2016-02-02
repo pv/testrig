@@ -1,0 +1,39 @@
+diff -Naur f90cache-0.96/f90cache.c f90cache-0.96.mod/f90cache.c
+--- f90cache-0.96/f90cache.c	2015-08-25 12:38:39.000000000 +0300
++++ f90cache-0.96.mod/f90cache.c	2016-02-02 16:17:19.427771028 +0200
+@@ -1095,6 +1095,11 @@
+     if (strncmp(compiler_path, "gfortran", 8) == 0) {
+ 	/* store the dirpath of the compiler */
+ 	compiler_dirname = dirname(orig_args->argv[0]);
++#if 1
++	GNU_VERSION = "4.6";
++	GNU_MAJOR_VERSION_NUM = 4;
++	GNU_MINOR_VERSION_NUM = 6;
++#else
+ 	/* find and store the GNU version, assuming that the compiler
+ 	   name is "gfortran-x.y" */
+ 	p = strchr(compiler_path, '-');
+@@ -1117,6 +1122,7 @@
+                 p2 = strchr(digits, *GNU_VERSION);
+                 if (p2) {
+                     GNU_MINOR_VERSION_NUM = p2-digits;
++#endif
+                     if ( (GNU_MAJOR_VERSION_NUM == 4) & (GNU_MINOR_VERSION_NUM >= 3) ) {
+                         /* '-traditional-cpp' flag is absolutely required for
+                            preserving white spaces in a fixed format Fortran source
+@@ -1133,6 +1139,7 @@
+                         printf("(f90cache:) *** f90cache supports only 4.3 to 5.2!\n");
+                         exit(1);
+                     }
++#if 0
+                 } else {
+                     printf("(f90cache:) *** this is a PATCHED version of F90CACHE which accept only modified name for GNU fortran compilers: gfortran-4.x\n");
+                     exit(1);
+@@ -1146,6 +1153,7 @@
+ 	    printf("(f90cache:) *** this is a PATCHED version of F90CACHE which accept only modified name for GNU fortran compilers: gfortran-x.y\n");
+             exit(1);
+ 	}
++#endif
+ 	f90_compiler_type = GNU_GFC;
+     } else if (strncmp(compiler_path, "ifort", 5) == 0) {
+ 	f90_compiler_type = INTEL_IFC;
