@@ -35,11 +35,12 @@ class Fixture(object):
 
     """
 
-    def __init__(self, cache_dir, log_fn, cleanup=True, git_cache=True):
+    def __init__(self, cache_dir, log_fn, cleanup=True, git_cache=True, verbose=False):
         self.log = open(log_fn, 'wb')
         self.log_fn = os.path.abspath(log_fn)
         self.cleanup = cleanup
         self.git_cache = git_cache
+        self.verbose = verbose
 
         self.cache_dir = os.path.abspath(cache_dir)
 
@@ -56,7 +57,7 @@ class Fixture(object):
         if os.path.isdir(self.env_dir):
             shutil.rmtree(self.env_dir)
 
-        self.print("Setting up virtualenv at {0}".format(os.path.relpath(self.env_dir)))
+        self.print("Setting up virtualenv at {0}...".format(os.path.relpath(self.env_dir)))
         virtualenv.create_environment(self.env_dir)
         self._debian_fix()
         self.pip_install(['pip==8.0.2'])
@@ -111,7 +112,7 @@ sysconfig.get_python_inc = _xx_get_python_inc
             msg = '(cd %r && %s)' % (os.path.relpath(kwargs['cwd']), msg)
         msg = '$ ' + msg
 
-        self.print(msg)
+        self.print(msg, level=1)
 
         p = subprocess.Popen(cmd, stdout=self.log, stderr=subprocess.STDOUT,
                              **kwargs)
@@ -127,7 +128,7 @@ sysconfig.get_python_inc = _xx_get_python_inc
     def run_test_cmd(self, cmd, log):
         cmd = ". bin/activate; " + cmd
 
-        self.print("$ cd cache/env; " + cmd)
+        self.print("$ cd cache/env; " + cmd, level=1)
 
         p = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT, shell=True,
                              cwd=self.env_dir)
@@ -220,9 +221,9 @@ sysconfig.get_python_inc = _xx_get_python_inc
     def get_cached_repo(self, module):
         return os.path.join(self.repo_cache_dir, module)
 
-    def print(self, msg):
-        print(msg, file=sys.stderr)
-        sys.stderr.flush()
-        if self.log is not sys.stderr:
-            print(msg, file=self.log)
-            self.log.flush()
+    def print(self, msg, level=0):
+        if self.verbose or level == 0:
+            print(msg, file=sys.stderr)
+            sys.stderr.flush()
+        print(msg, file=self.log)
+        self.log.flush()

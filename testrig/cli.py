@@ -45,6 +45,8 @@ def main():
     p.add_argument('--config', action="store",
                    dest="config", default='testrig.ini',
                    help="configuration file")
+    p.add_argument('--verbose', '-v', action="store_true",
+                   dest="verbose", help="be more verbose")
     p.add_argument('tests', nargs='*', default=[], metavar='TESTS',
                    help="Tests to run. Can also be a glob pattern, e.g., '*scipy_dev*'")
     args = p.parse_args()
@@ -80,7 +82,7 @@ def main():
     lock = LockFile(os.path.join(cache_dir, 'lock'))
     with lock:
         for t in selected_tests:
-            r = t.run(CACHE_DIR, cleanup=args.cleanup, git_cache=args.git_cache)
+            r = t.run(CACHE_DIR, cleanup=args.cleanup, git_cache=args.git_cache, verbose=args.verbose)
             results.append(r)
 
     # Output summary
@@ -159,7 +161,7 @@ class Test(object):
         self.parser = get_parser(parser)
 
 
-    def run(self, cache_dir, cleanup=True, git_cache=True):
+    def run(self, cache_dir, cleanup=True, git_cache=True, verbose=False):
         log_old_fn = os.path.join(cache_dir, '%s-build-old.log' % self.name)
         log_new_fn = os.path.join(cache_dir, '%s-build-new.log' % self.name)
 
@@ -183,12 +185,12 @@ class Test(object):
         for log_fn, test_log_fn, install in ((log_old_fn, test_log_old_fn, self.old_install),
                                              (log_new_fn, test_log_new_fn, self.new_install)):
             fixture = Fixture(cache_dir, log_fn,
-                              cleanup=cleanup, git_cache=git_cache)
-            fixture.print("Logging into: {0}".format(os.path.relpath(log_fn)))
+                              cleanup=cleanup, git_cache=git_cache, verbose=verbose)
             try:
                 wait_printer.set_log_file(log_fn)
                 try:
                     fixture.setup()
+                    fixture.print("Building (logging to {0})...".format(os.path.relpath(log_fn)))
                     fixture.install_spec(install)
                     fixture.install_spec(self.base_install)
                 except:
@@ -196,7 +198,7 @@ class Test(object):
                         print(f.read(), file=sys.stderr)
                     return -1, -1, -1
 
-                fixture.print("Logging into: {0}".format(os.path.relpath(test_log_fn)))
+                fixture.print("Running tests (logging to {0})...".format(os.path.relpath(test_log_fn)))
                 with open(test_log_fn, 'wb') as f:
                     wait_printer.set_log_file(test_log_fn)
                     fixture.run_test_cmd(self.run_cmd, log=f)
@@ -217,9 +219,9 @@ class Test(object):
 
         wait_printer.stop()
 
-        return self.check(failures, test_count)
+        return self.check(failures, test_count, verbose)
 
-    def check(self, failures, test_count):
+    def check(self, failures, test_count, verbose):
         old, new = failures
 
         old_set = set(old.keys())
@@ -228,7 +230,7 @@ class Test(object):
         added_set = new_set - old_set
         same_set = new_set.intersection(old_set)
 
-        if same_set:
+        if same_set and verbose:
             print("\n\n")
             print("="*79)
             print("{0}: pre-existing failures".format(self.name))
