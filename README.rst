@@ -11,6 +11,8 @@ Each test suite run is run in a virtualenv constructed from scratch.
 You should install ``ccache`` (and possibly also ``f90cache``) to
 avoid drinking too much coffee.
 
+Currently, this is POSIX-only, and tested only on Linux.
+
 Configuration
 -------------
 
@@ -32,7 +34,7 @@ versions)::
   parser=nose
 
 
-The configuration items in each section are::
+The configuration items in each section are:
 
 * ``old``: package specifications for the 'old' configuration.
 * ``new``: package specifications for the 'new' configuration.
