@@ -4,7 +4,11 @@ import sys
 import os
 import shutil
 import subprocess
+import multiprocessing
 import virtualenv
+
+
+VIRTUALENV_LOCK = multiprocessing.Lock()
 
 
 class Fixture(object):
@@ -61,8 +65,8 @@ class Fixture(object):
         if os.path.isdir(self.env_dir):
             shutil.rmtree(self.env_dir)
 
-        self.print("Setting up virtualenv at {0}...".format(os.path.relpath(self.env_dir)))
-        virtualenv.create_environment(self.env_dir)
+        with VIRTUALENV_LOCK:
+            virtualenv.create_environment(self.env_dir)
         self._debian_fix()
         self.pip_install(['pip==8.0.2'])
 

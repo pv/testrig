@@ -55,3 +55,6 @@ Run::
     python run.py $TESTENV
 
 The runs may take a long time, as it builds everything from source.
+
+Note that parallel testing (``-j``) results to somewhat less efficient
+ccache usage.

@@ -14,18 +14,22 @@ import time
 import fnmatch
 import argparse
 import threading
+import multiprocessing
 
 try:
     import configparser
 except ImportError:
     import ConfigParser as configparser
 
+try:
+    import joblib
+except ImportError:
+    joblib = None
+
 from .fixture import Fixture
 from .lockfile import LockFile
 from .parser import get_parser
 
-
-CACHE_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'cache')
 
 EXTRA_PATH = [
     '/usr/lib/ccache',
@@ -33,6 +37,7 @@ EXTRA_PATH = [
 ]
 
 LOG_STREAM = None
+LOG_LOCK = multiprocessing.Lock()
 
 
 def main():
@@ -45,10 +50,17 @@ def main():
                    help="don't cache git repositories")
     p.add_argument('--no-cleanup', '-n', action="store_false",
                    dest="cleanup", default=True,
-                   help="don't clean up before or after")
+                   help="don't clean up afterward")
     p.add_argument('--config', action="store",
                    dest="config", default='testrig.ini',
                    help="configuration file")
+    p.add_argument('--cache', action="store",
+                   dest="cache_dir", default='cache',
+                   help="cache directory")
+    p.add_argument('--parallel', '-j', action="store", type=int, nargs='?',
+                   metavar='NUM_PROC',
+                   dest="parallel", default=0, const=-1,
+                   help="build and run tests in parallel")
     p.add_argument('--verbose', '-v', action="store_true",
                    dest="verbose", help="be more verbose")
     p.add_argument('tests', nargs='*', default=[], metavar='TESTS',
@@ -68,28 +80,53 @@ def main():
                     selected_tests.append(t)
                     break
 
-    # Run
-    cache_dir = CACHE_DIR
+    if not selected_tests:
+        p.error('no tests to run')
+
+    # Open log
+    cache_dir = os.path.abspath(args.cache_dir)
     try:
         os.makedirs(cache_dir)
     except OSError:
         # probably already exists
         pass
 
-    LOG_STREAM = open(os.path.join(cache_dir, 'testrig.log'), 'wb')
+    log_fn = os.path.join(cache_dir, 'testrig.log')
+    with open(log_fn, 'wb'):
+        pass
+    LOG_STREAM = open(log_fn, 'a')
 
+    # Run
     set_extra_env()
 
     if not EXTRA_PATH[0]:
         print_logged("WARNING: ccache is not available -- this is going to be slow\n")
 
-    results = []
+    for t in selected_tests:
+        t.print_info()
 
-    lock = LockFile(os.path.join(cache_dir, 'lock'))
-    with lock:
+    print_logged("Logging to: {0}\n".format(os.path.relpath(log_fn)))
+
+    results = {}
+
+    if args.parallel < 0:
+        args.parallel = multiprocessing.cpu_count() + 1 + args.parallel
+
+    if args.parallel > 0 and joblib is not None:
+        jobs = []
+        os.environ['NPY_NUM_BUILD_JOBS'] = str(max(1, multiprocessing.cpu_count()//min(len(selected_tests), args.parallel)))
         for t in selected_tests:
-            r = t.run(CACHE_DIR, cleanup=args.cleanup, git_cache=args.git_cache, verbose=args.verbose)
-            results.append(r)
+            job_cache_dir = os.path.join(cache_dir, 'parallel', t.name)
+            jobs.append(joblib.delayed(do_run)(t, job_cache_dir, cleanup=args.cleanup, git_cache=args.git_cache, verbose=args.verbose))
+        job_results = joblib.Parallel(n_jobs=args.parallel, backend="threading")(jobs)
+        results = dict(zip([t.name for t in selected_tests], job_results))
+    else:
+        if args.parallel:
+            print_logged("WARNING: joblib not installed -- parallel run not possible\n")
+        os.environ['NPY_NUM_BUILD_JOBS'] = str(multiprocessing.cpu_count())
+        for t in selected_tests:
+            r = do_run(t, cache_dir, cleanup=args.cleanup, git_cache=args.git_cache, verbose=args.verbose)
+            results[t.name] = r
 
     # Output summary
     msg = "\n\n"
@@ -98,16 +135,16 @@ def main():
     msg += ("="*79) + "\n"
     print_logged(msg)
     ok = True
-    for t, entry in zip(selected_tests, results):
+    for name, entry in sorted(results.items()):
         num, num_new_fail, num_old_fail = entry
         if num_new_fail == 0:
-            print_logged("- {0}: OK (ran {1} tests, {2} pre-existing failures)".format(t.name, num, num_old_fail))
+            print_logged("- {0}: OK (ran {1} tests, {2} pre-existing failures)".format(name, num, num_old_fail))
         elif num_new_fail < 0:
-            print_logged("- {0}: ERROR".format(t.name))
+            print_logged("- {0}: ERROR".format(name))
             ok = False
         else:
             ok = False
-            print_logged("- {0}: FAIL (ran {1} tests, {2} new failures, {3} pre-existing failures)".format(t.name, num, num_new_fail, num_old_fail))
+            print_logged("- {0}: FAIL (ran {1} tests, {2} new failures, {3} pre-existing failures)".format(name, num, num_new_fail, num_old_fail))
     print_logged("")
 
     # Done
@@ -117,12 +154,32 @@ def main():
         sys.exit(1)
 
 
+def do_run(test, cache_dir, cleanup, git_cache, verbose):
+    cache_dir = os.path.abspath(cache_dir)
+    try:
+        os.makedirs(cache_dir)
+    except OSError:
+        # probably already exists
+        pass
+
+    lock = LockFile(os.path.join(cache_dir, 'lock'))
+    ok = lock.acquire(block=False)
+    if not ok:
+        print_logged("ERROR: another process is already using the cache directory '{0}'".format(os.path.relpath(cache_dir)))
+        sys.exit(1)
+    try:
+        return test.run(cache_dir, cleanup, git_cache, verbose)
+    finally:
+        lock.release()
+
+
 def print_logged(*a):
     assert LOG_STREAM is not None
-    print(*a)
-    sys.stdout.flush()
-    print(*a, file=LOG_STREAM)
-    LOG_STREAM.flush()
+    with LOG_LOCK:
+        print(*a)
+        sys.stdout.flush()
+        print(*a, file=LOG_STREAM)
+        LOG_STREAM.flush()
 
 
 def set_extra_env():
@@ -201,13 +258,6 @@ class Test(object):
         test_count = []
         failures = []
 
-        msg = ""
-        msg += "="*79 + "\n"
-        msg += "{0}: running".format(self.name) + "\n"
-        msg += "="*79 + "\n"
-        print_logged(msg)
-        self.print_info()
-
         for log_fn, test_log_fn, install in ((log_old_fn, test_log_old_fn, self.old_install),
                                              (log_new_fn, test_log_new_fn, self.new_install)):
             fixture = Fixture(cache_dir, log_fn, print_logged=print_logged,
@@ -215,17 +265,20 @@ class Test(object):
             try:
                 wait_printer.set_log_file(log_fn)
                 try:
+                    print_logged("{0}: setting up virtualenv at {1}...".format(
+                        self.name, os.path.relpath(fixture.env_dir)))
                     fixture.setup()
-                    fixture.print("Building (logging to {0})...".format(os.path.relpath(log_fn)))
+                    print_logged("{0}: building (logging to {1})...".format(self.name, os.path.relpath(log_fn)))
                     fixture.install_spec(install)
                     fixture.install_spec(self.base_install)
                 except:
                     with open(log_fn, 'rb') as f:
-                        print_logged("ERROR: build failed")
+                        print_logged("{0}: ERROR: build failed".format(self.name))
                         print_logged(f.read())
+                    raise
                     return -1, -1, -1
 
-                fixture.print("Running tests (logging to {0})...".format(os.path.relpath(test_log_fn)))
+                fixture.print("{0}: running tests (logging to {1})...".format(self.name, os.path.relpath(test_log_fn)))
                 with open(test_log_fn, 'wb') as f:
                     wait_printer.set_log_file(test_log_fn)
                     fixture.run_test_cmd(self.run_cmd, log=f)
@@ -257,23 +310,27 @@ class Test(object):
         added_set = new_set - old_set
         same_set = new_set.intersection(old_set)
 
+        msg = ""
+        
         if same_set and verbose:
-            print_logged("\n\n")
-            print_logged("="*79)
-            print_logged("{0}: pre-existing failures".format(self.name))
-            print_logged("="*79)
+            msg += "\n\n\n"
+            msg += "="*79 + "\n"
+            msg += "{0}: pre-existing failures\n".format(self.name)
+            msg += "="*79 + "\n"
 
             for k in sorted(same_set):
-                print_logged(new[k])
+                msg += new[k] + "\n"
 
         if added_set:
-            print_logged("\n\n")
-            print_logged("="*79)
-            print_logged("{0}: new failures".format(self.name))
-            print_logged("="*79)
+            msg += "\n\n\n"
+            msg += "="*79 + "\n"
+            msg += "{0}: new failures\n".format(self.name)
+            msg += "="*79 + "\n"
 
             for k in sorted(added_set):
-                print_logged(new[k])
+                msg += new[k]
+
+        print_logged(msg)
 
         return test_count[1], len(added_set), len(same_set)
         
