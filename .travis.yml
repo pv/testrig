@@ -31,7 +31,7 @@ cache:
     - $HOME/.ccache
     - $HOME/.f90cache
     - $HOME/.cache/pip
-before_install:
+install:
   - |
     set -e
     tar xzf ci/f90cache-0.96.tar.gz
