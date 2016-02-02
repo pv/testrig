@@ -288,9 +288,16 @@ class Test(object):
                         msg = "{0}: ERROR: build failed: {1}\n".format(self.name, str(exc))
                         msg += "    " + f.read().replace("\n", "\n    ")
                         print_logged(msg)
+
                     if isinstance(exc, KeyboardInterrupt):
                         raise
-                    return -1, -1, -1
+
+                    if log_fn.endswith('-old.log'):
+                        test_count.append(-1)
+                        failures.append({})
+                        continue
+                    else:
+                        return -1, -1, -1
 
                 fixture.print("{0}: running tests (logging to {1})...".format(self.name, os.path.relpath(test_log_fn)))
                 with text_open(test_log_fn, 'w') as f:
@@ -309,7 +316,7 @@ class Test(object):
                         msg += "{0}: {1}\n".format(self.name, err_msg)
                         msg += "    " + data.replace("\n", "\n    ")
                         print_logged(msg)
-                        return -1, -1, -1
+                    continue
             finally:
                 wait_printer.set_log_file(None)
                 fixture.teardown()
