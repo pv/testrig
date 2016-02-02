@@ -31,7 +31,7 @@ cache:
     - $HOME/.ccache
     - $HOME/.f90cache
     - $HOME/.cache/pip
-script:
+before_install:
   - |
     set -e
     tar xzf ci/f90cache-0.96.tar.gz
@@ -43,6 +43,7 @@ script:
     popd
   - export PATH=$HOME/f90cache/bin:$PATH
   - pip install virtualenv
+script:
   - python run.py -g $MODULE
 notifications:
   email: false
