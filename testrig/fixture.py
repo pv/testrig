@@ -167,9 +167,6 @@ sysconfig.get_python_inc = _xx_get_python_inc
         """
         Install python packages, based on pip-like version specification string
         """
-        pip_install = []
-        git_install = []
-
         for part in package_spec:
             if part.startswith('git+'):
                 if '@' in part:
@@ -178,15 +175,10 @@ sysconfig.get_python_inc = _xx_get_python_inc
                     url = part
                     branch = 'master'
                 module = url.strip('/').split('/')[-1]
-                git_install.append((module, url[4:], branch))
+
+                self.git_install(module, url[4:], branch)
             else:
-                pip_install.append(part)
-
-        if pip_install:
-            self.pip_install(pip_install)
-
-        for module, url, branch in git_install:
-            self.git_install(module, url, branch)
+                self.pip_install([part])
 
     def pip_install(self, packages):
         # Specifying a constant build directory is better for ccache.
