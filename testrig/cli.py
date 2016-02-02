@@ -7,7 +7,6 @@ Run tests in the test rig.
 """
 from __future__ import absolute_import, division, print_function
 
-import sys
 import os
 import sys
 import io
@@ -87,16 +86,18 @@ def main():
     msg += "Summary\n"
     msg += ("="*79) + "\n"
     print(msg)
+    ok = True
     for t, entry in zip(selected_tests, results):
-        ok, num, num_fail, num_old_fail = entry
-        if ok:
-            print("- %s: OK (ran {} tests, {} old failures)" % (t.name, num, num_fail, num_old_fail))
+        num, num_new_fail, num_old_fail = entry
+        if num_new_fail == 0:
+            print("- {0}: OK (ran {1} tests, {2} old failures)" % (t.name, num, num_old_fail))
+            ok = False
         else:
-            print("- %s: FAIL (ran {} tests, {} new failures, {} old failures)" % (t.name, num, num_fail, num_old_fail))
+            print("- {0}: FAIL (ran {1} tests, {2} new failures, {3} old failures)" % (t.name, num, num_new_fail, num_old_fail))
     print("")
 
     # Done
-    if all(results):
+    if ok:
         sys.exit(0)
     else:
         sys.exit(1)
@@ -114,15 +115,24 @@ def get_tests():
     p.read(os.path.join(os.path.dirname(__file__), '..', 'testrig.ini'))
 
     tests = []
-    
+
+    def get(section, name):
+        if not p.has_option(section, name):
+            if p.has_option('DEFAULT', name):
+                return p.get('DEFAULT', name)
+        return p.get(section, name)
+
     for section in p.sections():
+        if section == 'DEFAULT':
+            continue
+
         try:
             t = Test(section,
-                     p.get(section, 'base'),
-                     p.get(section, 'old'),
-                     p.get(section, 'new'),
-                     p.get(section, 'run'),
-                     p.get(section, 'parser'))
+                     get(section, 'base'),
+                     get(section, 'old'),
+                     get(section, 'new'),
+                     get(section, 'run'),
+                     get(section, 'parser'))
             tests.append(t)
         except (ValueError, configparser.Error) as err:
             print("testrig.ini: section {}: {}".format(section, err))
@@ -157,9 +167,9 @@ class Test(object):
         failures = []
 
         msg = ""
-        msg += ("="*79) + "\n"
-        msg += ("Running test: %s" % self.name) + "\n"
-        msg += ("="*79) + "\n"
+        msg += "="*79 + "\n"
+        msg += "{0}: running".format(self.name) + "\n"
+        msg += "="*79 + "\n"
         print(msg, file=sys.stderr)
 
         for log_fn, test_log_fn, install in ((log_old_fn, test_log_old_fn, self.old_install),
@@ -209,15 +219,16 @@ class Test(object):
         if old:
             print("\n\n")
             print("="*79)
-            print("Old failures:")
+            print("{0}: old failures".format(self.name))
             print("="*79)
 
             for name, msg in sorted(old.items()):
                 print(msg)
 
         if new_set:
+            print("\n\n")
             print("="*79)
-            print("New failures:")
+            print("{0}: new failures".format(self.name))
             print("="*79)
 
             for k in sorted(new_set):

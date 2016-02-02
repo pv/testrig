@@ -63,7 +63,6 @@ def parse_pytest_log(text, cwd):
     failures = {}
     test_count = 0
 
-    state = 'initial'
     message = []
 
     with io.open(log_fn, 'r', encoding='utf-8', errors='replace') as f:
@@ -73,17 +72,17 @@ def parse_pytest_log(text, cwd):
                 break
             line = line.rstrip("\n")
 
-            if line.startswith('.'):
+            if line[:1] in ('F', 'E'):
                 test_count += 1
-                message = []
+                name = line[1:].strip()
+                message = ["-"*79, line]
+                failures[name] = message
             elif line.startswith(' '):
                 message.append(line[1:])
                 continue
             else:
                 test_count += 1
-                name = line[1:].strip()
-                message = ["-"*79, line]
-                failures[name] = message
+                message = []
 
     for key in list(failures.keys()):
         failures[key] = "\n".join(failures[key])
