@@ -22,6 +22,7 @@ cache:
     - $HOME/.ccache
     - $HOME/.cache/pip
 script:
+  - pip install virtualenv
   - python run.py -g $MODULE
 notifications:
   email: false
