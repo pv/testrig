@@ -31,7 +31,7 @@ def test_nose_parser_basic():
     """)
 
     parser = get_parser('nose')
-    failures, test_count = parser(text, None)
+    failures, test_count, err_msg = parser(text, None)
 
     expected = {
         'test_bar': 'ERROR: test_bar\n----------------------------------------------------------------------\naaa\n',
@@ -39,24 +39,28 @@ def test_nose_parser_basic():
     }
     assert failures == expected, failures
     assert test_count == 3, test_count
+    assert err_msg is None
 
 
 def test_pytest_log_parser_basic():
-    text = ("F test/test_foo.py::test_bar\n"
-            " def test_bar():\n"
-            " >       assert False\n"
-            " E       assert False\n"
-            " \n"
-            " test/test_foo.py:4: AssertionError\n"
-            ". test/test_foo.py::test_asd\n")
+    text = ("============================= test session starts ==============================\n"
+            "...\n"
+            "= 8 failed, 9788 passed, 244 skipped, 43 xfailed, 4 xpassed in 182.91 seconds ==\n\n")
+    log = ("F test/test_foo.py::test_bar\n"
+           " def test_bar():\n"
+           " >       assert False\n"
+           " E       assert False\n"
+           " \n"
+           " test/test_foo.py:4: AssertionError\n"
+           ". test/test_foo.py::test_asd\n")
 
     tmpdir = tempfile.mkdtemp()
     try:
         with open(os.path.join(tmpdir, 'pytest.log'), 'w') as f:
-            f.write(text)
+            f.write(log)
     
         parser = get_parser('pytest-log')
-        failures, test_count = parser(text, tmpdir)
+        failures, test_count, err_msg = parser(text, tmpdir)
     finally:
         shutil.rmtree(tmpdir)
 
@@ -71,3 +75,4 @@ def test_pytest_log_parser_basic():
     }
     assert failures == expected, failures
     assert test_count == 2, test_count
+    assert err_msg is None
