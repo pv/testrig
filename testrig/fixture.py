@@ -131,29 +131,15 @@ sysconfig.get_python_inc = _xx_get_python_inc
         env = dict(os.environ)
         env['CCACHE_BASEDIR'] = self.env_dir
 
-        p = subprocess.Popen(cmd, stdout=self.log, stderr=subprocess.STDOUT, cwd=cwd, env=env)
-        try:
-            p.communicate()
-            if p.returncode != 0:
-                raise RuntimeError("Failed to run {0} (see log)".format(cmd))
-        except:
-            if p.returncode is None:
-                p.terminate()
-            raise
+        subprocess.check_call(cmd, stdout=self.log, stderr=subprocess.STDOUT, cwd=cwd, env=env)
 
     def run_test_cmd(self, cmd, log):
         cmd = ". bin/activate; " + cmd
 
         self.print("$ cd cache/env; " + cmd, level=1)
 
-        p = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT, shell=True,
-                             cwd=self.env_dir)
-        try:
-            p.communicate()
-        except:
-            if p.returncode is None:
-                p.terminate()
-            raise
+        subprocess.call(cmd, stdout=log, stderr=subprocess.STDOUT, shell=True,
+                        cwd=self.env_dir)
 
     def run_python_script(self, cmd, cwd=None):
         cmd = [os.path.join(self.env_dir, 'bin', 'python')] + cmd

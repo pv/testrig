@@ -12,6 +12,7 @@ import sys
 import time
 import fnmatch
 import argparse
+import subprocess
 import threading
 import multiprocessing
 
@@ -294,7 +295,7 @@ class Test(object):
                         msg += "    " + f.read().replace("\n", "\n    ")
                         print_logged(msg)
 
-                    if isinstance(exc, KeyboardInterrupt):
+                    if not isinstance(exc, (subprocess.CalledProcessError, OSError)):
                         raise
 
                     if log_fn.endswith('-old.log'):
@@ -303,7 +304,7 @@ class Test(object):
                         warns.append({})
                         continue
                     else:
-                        return -1, -1, -1
+                        return -1, -1, -1, -1, -1
 
                 info = fixture.get_info()
                 fixture.print("{0}: installed {1}".format(self.name, info))
