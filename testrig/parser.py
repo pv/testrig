@@ -55,7 +55,27 @@ def parse_nose(text, cwd):
     else:
         err_msg = None
 
-    return failures, test_count, err_msg
+    warns = _parse_nose_warnings(text)
+
+    return failures, warns, test_count, err_msg
+
+
+def _parse_nose_warnings(text):
+    test_name = ''
+    w = {}
+
+    for line in text.splitlines():
+        line = line.rstrip()
+
+        m = re.search('^(.*)\s+\.\.\.\s+', line)
+        if m:
+            test_name = m.group(1).strip()
+
+        m = re.search('/([^/]+.py:\d+): (.*Warning: .*)$', line)
+        if m:
+            w[test_name + ": " + m.group(1).strip()] = line.strip() + "\n---"
+
+    return w
 
 
 def parse_pytest_log(text, cwd):
@@ -98,7 +118,27 @@ def parse_pytest_log(text, cwd):
         test_count = -1
         err_msg = "ERROR: test suite did not run to the end"
 
-    return failures, test_count, err_msg
+    warns = _parse_pytest_warnings(text)
+
+    return failures, warns, test_count, err_msg
+
+
+def _parse_pytest_warnings(text):
+    test_name = ''
+    w = {}
+
+    for line in text.splitlines():
+        line = line.rstrip()
+
+        m = re.search('^([^\t ]+::test_[^\t ]+)\s+', line)
+        if m:
+            test_name = m.group(1).strip()
+
+        m = re.search('/([^/]+.py:\d+): (.*Warning: .*)$', line)
+        if m:
+            w[test_name + ": " + m.group(1).strip()] = line.strip() + "\n---"
+
+    return w
 
 
 def get_parser(name):

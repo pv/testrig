@@ -138,15 +138,18 @@ def main():
     msg += ("="*79) + "\n\n"
     ok = True
     for name, entry in sorted(results.items()):
-        num, num_new_fail, num_old_fail = entry
-        if num_new_fail == 0 and num > 0:
-            msg += "- {0}: OK (ran {1} tests, {2} pre-existing failures)\n".format(name, num, num_old_fail)
-        elif num_new_fail < 0 or num < 0:
+        test_count, fail_new_count, fail_same_count, warn_new_count, warn_same_count = entry
+
+        if fail_new_count < 0 or test_count < 0:
             msg += "- {0}: ERROR\n".format(name)
             ok = False
+        elif fail_new_count == 0 and test_count > 0:
+            msg += "- {0}: OK (ran {1} tests, {2} pre-existing failures, {3} warnings, {4} pre-existing warnings)\n".format(
+                name, test_count, fail_same_count, warn_new_count, warn_same_count)
         else:
             ok = False
-            msg += "- {0}: FAIL (ran {1} tests, {2} new failures, {3} pre-existing failures)\n".format(name, num, num_new_fail, num_old_fail)
+            msg += "- {0}: FAIL (ran {1} tests, {2} new failures, {3} pre-existing failures, {4} warnings, {5} pre-existing warnings))\n".format(
+                name, test_count, fail_new_count, fail_same_count, warn_new_count, warn_same_count)
     msg += "\n"
 
     print_logged(msg)
@@ -268,6 +271,7 @@ class Test(object):
 
         test_count = []
         failures = []
+        warns = []
 
         for log_fn, test_log_fn, install in ((log_old_fn, test_log_old_fn, self.old_install),
                                              (log_new_fn, test_log_new_fn, self.new_install)):
@@ -296,6 +300,7 @@ class Test(object):
                     if log_fn.endswith('-old.log'):
                         test_count.append(-1)
                         failures.append({})
+                        warns.append({})
                         continue
                     else:
                         return -1, -1, -1
@@ -312,9 +317,10 @@ class Test(object):
                 # Parse test results
                 with text_open(test_log_fn, 'r') as f:
                     data = f.read()
-                    fail, count, err_msg = self.parser(data, os.path.join(cache_dir, 'env'))
+                    fail, warn, count, err_msg = self.parser(data, os.path.join(cache_dir, 'env'))
                     test_count.append(count)
                     failures.append(fail)
+                    warns.append(warn)
 
                     if err_msg is not None:
                         msg = "{0}: ERROR: failed to parse test output\n".format(self.name)
@@ -329,10 +335,13 @@ class Test(object):
 
         wait_printer.stop()
 
-        return self.check(failures, test_count, verbose)
+        fail_new_count, fail_same_count = self.check(failures, verbose, type_str="failures")
+        warn_new_count, warn_same_count = self.check(warns, verbose, type_str="warnings")
 
-    def check(self, failures, test_count, verbose):
-        old, new = failures
+        return test_count[1], fail_new_count, fail_same_count, warn_new_count, warn_same_count
+
+    def check(self, items, verbose, type_str="failures"):
+        old, new = items
 
         old_set = set(old.keys())
         new_set = set(new.keys())
@@ -345,7 +354,7 @@ class Test(object):
         if same_set and verbose:
             msg += "\n\n\n"
             msg += "="*79 + "\n"
-            msg += "{0}: pre-existing failures\n".format(self.name)
+            msg += "{0}: pre-existing {1}\n".format(self.name, type_str)
             msg += "="*79 + "\n"
 
             for k in sorted(same_set):
@@ -354,7 +363,7 @@ class Test(object):
         if added_set:
             msg += "\n\n\n"
             msg += "="*79 + "\n"
-            msg += "{0}: new failures\n".format(self.name)
+            msg += "{0}: new {1}\n".format(self.name, type_str)
             msg += "="*79 + "\n"
 
             for k in sorted(added_set):
@@ -362,7 +371,7 @@ class Test(object):
 
         print_logged(msg)
 
-        return test_count[1], len(added_set), len(same_set)
+        return len(added_set), len(same_set)
         
 
 class WaitPrinter(object):
