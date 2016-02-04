@@ -42,6 +42,14 @@ versions)::
 
 The configuration items in each section are:
 
+* ``env``: which environment to use
+
+  - ``virtualenv``: virtualenv + pip, all packages are built from sources
+  - ``conda``: conda, uses binary packages, except for ``git+`` urls.
+    Note that you may need to write stuff like
+    ``numpy git+https://github.com/numpy/numpy.git`` since conda only
+    understand that packages installed by it are present.
+
 * ``old``: package specifications for the 'old' configuration.
 * ``new``: package specifications for the 'new' configuration.
 * ``base``: packages for both configurations. These are installed

@@ -26,7 +26,7 @@ try:
 except ImportError:
     joblib = None
 
-from .fixture import Fixture
+from .fixture import get_fixture_cls
 from .lockfile import LockFile
 from .parser import get_parser
 
@@ -228,7 +228,8 @@ def get_tests(config):
                      get(section, 'old'),
                      get(section, 'new'),
                      get(section, 'run'),
-                     get(section, 'parser'))
+                     get(section, 'parser'),
+                     get(section, 'env'))
             tests.append(t)
         except (ValueError, configparser.Error) as err:
             print_logged("testrig.ini: section {}: {}".format(section, err))
@@ -238,7 +239,7 @@ def get_tests(config):
 
 
 class Test(object):
-    def __init__(self, name, base_install, old_install, new_install, run_cmd, parser):
+    def __init__(self, name, base_install, old_install, new_install, run_cmd, parser, environment):
         self.name = name
         self.base_install = base_install.split()
         self.old_install = old_install.split()
@@ -246,6 +247,8 @@ class Test(object):
         self.run_cmd = run_cmd
         self.parser_name = parser
         self.parser = get_parser(parser)
+        self.fixture_cls = get_fixture_cls(environment)
+        self.env_name = environment
 
     def print_info(self):
         print_logged(("[{0}]\n"
@@ -254,9 +257,10 @@ class Test(object):
                       "    new={3}\n"
                       "    run={4}\n"
                       "    parser={5}\n"
+                      "    env={6}\n"
                       ).format(self.name, " ".join(self.base_install),
                                " ".join(self.old_install), " ".join(self.new_install),
-                               self.run_cmd, self.parser_name))
+                               self.run_cmd, self.parser_name, self.env_name))
 
     def run(self, cache_dir, cleanup=True, git_cache=True, verbose=False):
         log_old_fn = os.path.join(cache_dir, '%s-build-old.log' % self.name)
@@ -277,18 +281,17 @@ class Test(object):
         for log_fn, test_log_fn, install in ((log_old_fn, test_log_old_fn, self.old_install),
                                              (log_new_fn, test_log_new_fn, self.new_install)):
             log = text_open(log_fn, 'w')
-            fixture = Fixture(cache_dir, log, print_logged=print_logged,
-                              cleanup=cleanup, git_cache=git_cache, verbose=verbose)
+            fixture = self.fixture_cls(cache_dir, log, print_logged=print_logged,
+                                       cleanup=cleanup, git_cache=git_cache, verbose=verbose)
             try:
                 # Run virtualenv setup + builds
                 wait_printer.set_log_file(log_fn)
                 try:
-                    print_logged("{0}: setting up virtualenv at {1}...".format(
-                        self.name, os.path.relpath(fixture.env_dir)))
+                    print_logged("{0}: setting up {1} at {2}...".format(
+                        self.name, fixture.name, os.path.relpath(fixture.env_dir)))
                     fixture.setup()
                     print_logged("{0}: building (logging to {1})...".format(self.name, os.path.relpath(log_fn)))
-                    fixture.install_spec(install)
-                    fixture.install_spec(self.base_install)
+                    fixture.install_spec(install + self.base_install)
                 except BaseException as exc:
                     with text_open(log_fn, 'r') as f:
                         msg = "{0}: ERROR: build failed: {1}\n".format(self.name, str(exc))
