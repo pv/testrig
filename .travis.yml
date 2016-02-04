@@ -26,6 +26,11 @@ matrix:
           - libedit-dev
           - gcc-4.9
           - g++-4.9
+      before_script:
+        - mkdir -p $HOME/bin
+        - ln -s /usr/bin/gcc-4.9 $HOME/bin/gcc
+        - ln -s /usr/bin/g++-4.9 $HOME/bin/g++
+        - export PATH=$HOME/bin:$PATH
     - python: 2.7
       env:
         - MODULE=scipy
