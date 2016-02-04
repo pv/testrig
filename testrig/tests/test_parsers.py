@@ -45,10 +45,22 @@ def test_nose_parser_basic():
     }
     assert failures == expected, failures
     expected = {
-        "test_base.Test64Bit.test_no_64(<class 'test_base.TestBSR'>, 'test_fancy_indexing_randomized'): test_base.py:2426":
-            "/path/sparse/tests/test_base.py:2426: DeprecationWarning: This function is deprecated. Please call randint(-3, 3 + 1) instead",
-        "test_base.Test64Bit.test_no_64(<class 'test_base.TestBSR'>, 'test_fancy_indexing_randomized'): test_base.py:2425":
-            "test_base.Test64Bit.test_no_64(<class 'test_base.TestBSR'>, 'test_fancy_indexing_randomized') ... /path/sparse/tests/test_base.py:2425: DeprecationWarning: This function is deprecated. Please call randint(-5, 5 + 1) instead",
+        ("DeprecationWarning: This function is deprecated. Please call randint(-5, 5 + 1) instead\n"
+         "    /path/sparse/tests/test_base.py:2425\n"
+         "  I = np.random.random_integers(-M + 1, M - 1, size=NUM_SAMPLES)"):
+        ("WARNING: DeprecationWarning: This function is deprecated. Please call randint(-5, 5 + 1) instead\n"
+         "    /path/sparse/tests/test_base.py:2425\n"
+         "  I = np.random.random_integers(-M + 1, M - 1, size=NUM_SAMPLES)\n"
+         "test_base.Test64Bit.test_no_64(<class 'test_base.TestBSR'>, 'test_fancy_indexing_randomized')\n"
+         "---"),
+        ("DeprecationWarning: This function is deprecated. Please call randint(-3, 3 + 1) instead\n"
+         "    /path/sparse/tests/test_base.py:2426\n"
+         "  J = np.random.random_integers(-N + 1, N - 1, size=NUM_SAMPLES)"):
+        ("WARNING: DeprecationWarning: This function is deprecated. Please call randint(-3, 3 + 1) instead\n"
+         "    /path/sparse/tests/test_base.py:2426\n"
+         "  J = np.random.random_integers(-N + 1, N - 1, size=NUM_SAMPLES)\n"
+         "test_base.Test64Bit.test_no_64(<class 'test_base.TestBSR'>, 'test_fancy_indexing_randomized')\n"
+         "---"),
     }
     assert warns == expected, warns
     assert test_count == 3, test_count
@@ -93,7 +105,13 @@ def test_pytest_log_parser_basic():
     }
     assert failures == expected, failures
     expected = {
-        'test_parsers.py::test_asd: test_parsers.py:45': 'test_parsers.py::test_asd /path/test_parsers.py:45: UserWarning: something',
+        ("UserWarning: something\n"
+         "    /path/test_parsers.py:45\n"
+         "  warnings.warn('ffff')"):
+        ("WARNING: UserWarning: something\n"
+         "    /path/test_parsers.py:45\n"
+         "  warnings.warn('ffff')\n"
+         "test_parsers.py::test_asd\n---")
     }
     assert warns == expected, warns
     assert test_count == 2, test_count

@@ -55,27 +55,9 @@ def parse_nose(text, cwd):
     else:
         err_msg = None
 
-    warns = _parse_nose_warnings(text)
+    warns = _parse_warnings(text, suite="nose")
 
     return failures, warns, test_count, err_msg
-
-
-def _parse_nose_warnings(text):
-    test_name = ''
-    w = {}
-
-    for line in text.splitlines():
-        line = line.rstrip()
-
-        m = re.search('^(.*)\s+\.\.\.\s+', line)
-        if m:
-            test_name = m.group(1).strip()
-
-        m = re.search('/([^/]+.py:\d+): (.*Warning: .*)$', line)
-        if m:
-            w[test_name + ": " + m.group(1).strip()] = line.strip() + "\n---"
-
-    return w
 
 
 def parse_pytest_log(text, cwd):
@@ -118,25 +100,50 @@ def parse_pytest_log(text, cwd):
         test_count = -1
         err_msg = "ERROR: test suite did not run to the end"
 
-    warns = _parse_pytest_warnings(text)
+    warns = _parse_warnings(text, suite="pytest")
 
     return failures, warns, test_count, err_msg
 
 
-def _parse_pytest_warnings(text):
+def _parse_warnings(text, suite):
     test_name = ''
+    key = None
     w = {}
 
     for line in text.splitlines():
         line = line.rstrip()
 
-        m = re.search('^([^\t ]+::test_[^\t ]+)\s+', line)
-        if m:
-            test_name = m.group(1).strip()
+        if suite == 'nose':
+            m = re.search(r'^(.*)\s+\.\.\.\s+', line)
+            if m:
+                key = None
+                test_name = m.group(1).strip()
+        elif suite == 'pytest':
+            m = re.search('^([^\t ]+::test_[^\t ]+)\s+', line)
+            if m:
+                key = None
+                test_name = m.group(1).strip()
+        else:
+            raise ValueError()
 
-        m = re.search('/([^/]+.py:\d+): (.*Warning: .*)$', line)
+        m = re.search(r'(/.+\.py):(\d+): (.*Warning: .*)$', line)
         if m:
-            w[test_name + ": " + m.group(1).strip()] = line.strip() + "\n---"
+            key = "{0}\n    {1}:{2}".format(m.group(3),
+                                            m.group(1),
+                                            m.group(2))
+            w.setdefault(key, set()).add(test_name)
+            continue
+
+        if key is not None and line.startswith('  '):
+            items = w[key]
+            del w[key]
+            key += "\n" + line.rstrip()
+            w[key] = items.union(w.get(key, set()))
+        else:
+            key = None
+
+    for key in list(w.keys()):
+        w[key] = "WARNING: {0}\n{1}\n---".format(key, "\n".join(sorted(w[key])))
 
     return w
 
