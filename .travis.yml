@@ -6,6 +6,28 @@ matrix:
   include:
     - python: 2.7
       env:
+        - MODULE=numba
+        - LLVM_CONFIG=llvm-config-3.6
+      addons:
+        apt:
+          sources:
+          - ubuntu-toolchain-r-test
+          - llvm-toolchain-precise
+          - llvm-toolchain-precise-3.6
+          packages:
+          - libatlas-dev
+          - libatlas-base-dev
+          - liblapack-dev
+          - gfortran
+          - libgmp-dev
+          - libmpfr-dev
+          - ccache
+          - llvm-3.6-dev
+          - libedit-dev
+          - gcc-4.9
+          - g++-4.9
+    - python: 2.7
+      env:
         - MODULE=scipy
     - python: 2.7
       env:
@@ -25,14 +47,8 @@ matrix:
     - python: 2.7
       env:
         - MODULE=skimage
-    - python: 2.7
-      env:
-        - MODULE=numba
-        - LLVM_CONFIG=llvm-config-3.6
 addons:
   apt:
-    sources:
-    - llvm-toolchain-precise-3.6
     packages:
     - libatlas-dev
     - libatlas-base-dev
@@ -41,8 +57,6 @@ addons:
     - libgmp-dev
     - libmpfr-dev
     - ccache
-    - llvm-3.6-dev
-    - libedit-dev
 cache:
   directories:
     - $HOME/.ccache
