@@ -139,9 +139,9 @@ def main():
     ok = True
     for name, entry in sorted(results.items()):
         num, num_new_fail, num_old_fail = entry
-        if num_new_fail == 0:
+        if num_new_fail == 0 and num > 0:
             msg += "- {0}: OK (ran {1} tests, {2} pre-existing failures)\n".format(name, num, num_old_fail)
-        elif num_new_fail < 0:
+        elif num_new_fail < 0 or num < 0:
             msg += "- {0}: ERROR\n".format(name)
             ok = False
         else:
