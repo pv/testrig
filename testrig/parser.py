@@ -64,7 +64,7 @@ def parse_pytest_log(text, cwd):
     log_fn = os.path.join(cwd, 'pytest.log')
 
     if not os.path.isfile(log_fn):
-        return {}, -1, "ERROR: log file 'pytest.log' not found"
+        return {}, {}, -1, "ERROR: log file 'pytest.log' not found"
 
     failures = {}
     test_count = 0
