@@ -67,8 +67,8 @@ class Fixture(object):
 
         with VIRTUALENV_LOCK:
             virtualenv.create_environment(self.env_dir)
-        self._debian_fix()
-        self.pip_install(['pip==8.0.2'])
+            self._debian_fix()
+            self.pip_install(['pip==8.0.2'])
 
     def _debian_fix(self):
         # Remove numpy/ symlink under include/python* added by debian
