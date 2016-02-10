@@ -185,6 +185,9 @@ sysconfig.get_python_inc = _xx_get_python_inc
 
         repo = self.get_repo(module)
 
+        if os.path.isdir(repo):
+            shutil.rmtree(repo)
+
         if self.git_cache:
             cached_repo = self.get_cached_repo(module)
 
@@ -193,13 +196,8 @@ sysconfig.get_python_inc = _xx_get_python_inc
             else:
                 self.run_cmd(['git', 'fetch', src_repo], cwd=cached_repo)
 
-            if not os.path.isdir(repo):
-                self.run_cmd(['git', 'clone', '--reference', cached_repo, src_repo, repo])
-            else:
-                self.run_cmd(['git', 'fetch', 'origin'], cwd=repo)
+            self.run_cmd(['git', 'clone', '--reference', cached_repo, '-b', branch, src_repo, repo])
         else:
-            if os.path.isdir(repo):
-                shutil.rmtree(repo)
             self.run_cmd(['git', 'clone', '--depth', '1', '-b', branch, src_repo, repo])
 
         self.run_cmd(['git', 'reset', '--hard', branch], cwd=repo)
