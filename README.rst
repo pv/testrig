@@ -1,5 +1,5 @@
 .. image:: https://travis-ci.org/pv/testrig.png?branch=master
-   :target: https://travis-ci.org/pv/testrig/
+   :target: https://travis-ci.org/pv/testrig/branches
 
 =======
 testrig
