@@ -91,7 +91,8 @@ def main():
         # probably already exists
         pass
 
-    log_fn = os.path.join(cache_dir, 'testrig.log')
+    log_dir = cache_dir
+    log_fn = os.path.join(log_dir, 'testrig.log')
     with text_open(log_fn, 'w'):
         pass
     LOG_STREAM = text_open(log_fn, 'a')
@@ -118,7 +119,7 @@ def main():
             os.environ['NPY_NUM_BUILD_JOBS'] = str(max(1, multiprocessing.cpu_count()//min(len(selected_tests), args.parallel)))
             for t in selected_tests:
                 job_cache_dir = os.path.join(cache_dir, 'parallel', t.name)
-                jobs.append(joblib.delayed(do_run)(t, job_cache_dir, cleanup=args.cleanup, git_cache=args.git_cache, verbose=args.verbose))
+                jobs.append(joblib.delayed(do_run)(t, job_cache_dir, log_dir, cleanup=args.cleanup, git_cache=args.git_cache, verbose=args.verbose))
             job_results = joblib.Parallel(n_jobs=args.parallel, backend="threading")(jobs)
             results = dict(zip([t.name for t in selected_tests], job_results))
         else:
@@ -126,7 +127,7 @@ def main():
                 print_logged("WARNING: joblib not installed -- parallel run not possible\n")
             os.environ['NPY_NUM_BUILD_JOBS'] = str(multiprocessing.cpu_count())
             for t in selected_tests:
-                r = do_run(t, cache_dir, cleanup=args.cleanup, git_cache=args.git_cache, verbose=args.verbose)
+                r = do_run(t, cache_dir, log_dir, cleanup=args.cleanup, git_cache=args.git_cache, verbose=args.verbose)
                 results[t.name] = r
     except KeyboardInterrupt:
         print_logged("Interrupted")
@@ -169,7 +170,7 @@ def text_open(filename, mode):
         return open(filename, mode)
 
 
-def do_run(test, cache_dir, cleanup, git_cache, verbose):
+def do_run(test, cache_dir, log_dir, cleanup, git_cache, verbose):
     cache_dir = os.path.abspath(cache_dir)
     try:
         os.makedirs(cache_dir)
@@ -183,7 +184,7 @@ def do_run(test, cache_dir, cleanup, git_cache, verbose):
         print_logged("ERROR: another process is already using the cache directory '{0}'".format(os.path.relpath(cache_dir)))
         sys.exit(1)
     try:
-        return test.run(cache_dir, cleanup, git_cache, verbose)
+        return test.run(cache_dir, log_dir, cleanup, git_cache, verbose)
     finally:
         lock.release()
 
@@ -262,12 +263,12 @@ class Test(object):
                                " ".join(self.old_install), " ".join(self.new_install),
                                self.run_cmd, self.parser_name, self.env_name))
 
-    def run(self, cache_dir, cleanup=True, git_cache=True, verbose=False):
-        log_old_fn = os.path.join(cache_dir, '%s-build-old.log' % self.name)
-        log_new_fn = os.path.join(cache_dir, '%s-build-new.log' % self.name)
+    def run(self, cache_dir, log_dir, cleanup=True, git_cache=True, verbose=False):
+        log_old_fn = os.path.join(log_dir, '%s-build-old.log' % self.name)
+        log_new_fn = os.path.join(log_dir, '%s-build-new.log' % self.name)
 
-        test_log_old_fn = os.path.join(cache_dir, '%s-test-old.log' % self.name)
-        test_log_new_fn = os.path.join(cache_dir, '%s-test-new.log' % self.name)
+        test_log_old_fn = os.path.join(log_dir, '%s-test-old.log' % self.name)
+        test_log_new_fn = os.path.join(log_dir, '%s-test-new.log' % self.name)
 
         # Launch a thread that prints some output as long as something is
         # running, as long as that something produces output.
