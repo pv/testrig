@@ -80,7 +80,7 @@ class BaseFixture(object):
         out, err = p.communicate()
         return " ".join(sorted(out.split()))
 
-    def run_cmd(self, cmd, cwd=None):
+    def run_cmd(self, cmd, cwd=None, env=None):
         msg = " ".join(os.path.relpath(x) if os.path.exists(x) else x for x in cmd)
         if cwd is not None and os.path.relpath(cwd) != '.':
             msg = '(cd %r && %s)' % (os.path.relpath(cwd), msg)
@@ -88,7 +88,10 @@ class BaseFixture(object):
 
         self.print(msg, level=1)
 
-        env = dict(os.environ)
+        if env is None:
+            env = dict(os.environ)
+        else:
+            env = dict(env)
         env['CCACHE_BASEDIR'] = self.env_dir
 
         subprocess.check_call(cmd, stdout=self.log, stderr=subprocess.STDOUT, cwd=cwd, env=env)
@@ -274,6 +277,23 @@ class CondaFixture(BaseFixture):
     def env_install(self, packages):
         packages = [spec.replace('==', '=') for spec in packages]
         self.run_cmd(['conda', 'install', '--no-update-deps', '-y', '-p', self.env_dir] + packages)
+
+    def run_cmd(self, cmd, cwd=None, env=None):
+        if env is None:
+            env = dict(os.environ)
+        else:
+            env = dict(env)
+
+        def add_path(name, value):
+            env[name] = os.pathsep.join([value] + env.get(name, '').split(os.pathsep))
+
+        # Add environment variables to ensure correct BLAS etc. is linked
+        add_path('PATH', os.path.join(self.env_dir, 'bin'))
+        add_path('CPATH', os.path.join(self.env_dir, 'include'))
+        add_path('LIBRARY_PATH', os.path.join(self.env_dir, 'lib'))
+        add_path('LD_LIBRARY_PATH', os.path.join(self.env_dir, 'lib'))
+
+        return BaseFixture.run_cmd(self, cmd, cwd=cwd, env=env)
 
     def pip_install(self, packages):
         if os.path.isdir(self.build_dir):
