@@ -14,10 +14,26 @@ Each test suite run is run in a virtualenv constructed from scratch.
 You should install ``ccache`` (and possibly also ``f90cache``) to
 avoid drinking too much coffee.
 
+Alternatively, binary conda packages can be used --- however, binary
+incompatibities may arise in this configuration.
+
 Currently, this is POSIX-only, and tested only on Linux.
 
-See `Travis-CI <https://travis-ci.org/pv/testrig/>`__ for most recent
-results for Numpy master vs 1.7.2.
+See `Travis-CI <https://travis-ci.org/pv/testrig/>`__ for most recent results
+for latest Numpy maintenance branch.  Log in to Travis and press the restart
+button to re-run the checks for the latest commit / tag.
+
+Usage
+-----
+
+Run::
+
+    python run.py --help
+    python run.py pandas                            # run tests, default config
+    python run.py --config=testrig-conda.ini pandas # use conda packages
+    python run.py -j                                # run all packages parallel
+
+The runs may take a long time, as it builds everything from source.
 
 Configuration
 -------------
@@ -39,13 +55,13 @@ versions)::
   run=python -c 'import numpy; numpy.test("fast", verbose=2)'
   parser=nose
 
-
 The configuration items in each section are:
 
 * ``env``: which environment to use
 
   - ``virtualenv``: virtualenv + pip, all packages are built from sources
-  - ``conda``: conda, uses binary packages, except for ``git+`` urls.
+  - ``conda``: conda, uses binary packages, except for ``git+`` urls
+    and package names prefixed by ``pip+``.
     Note that you may need to write stuff like
     ``numpy git+https://github.com/numpy/numpy.git`` since conda only
     understand that packages installed by it are present.
@@ -60,15 +76,3 @@ The configuration items in each section are:
   - ``nose``: parses nose stdout
   - ``pytest-log``: parses contents from ``py.test --result-log=pytest.log ...``
 
-Usage
------
-
-Run::
-
-    python run.py --help
-    python run.py $TESTENV
-
-The runs may take a long time, as it builds everything from source.
-
-Note that parallel testing (``-j``) results to somewhat less efficient
-ccache usage.
