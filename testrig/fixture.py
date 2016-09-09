@@ -5,7 +5,6 @@ import os
 import shutil
 import subprocess
 import multiprocessing
-import virtualenv
 
 try:
     from shlex import quote as shell_quote
@@ -172,10 +171,9 @@ class VirtualenvFixture(BaseFixture):
         BaseFixture.setup(self)
 
         with VIRTUALENV_LOCK:
-            virtualenv.create_environment(self.env_dir)
+            self.run_cmd(['virtualenv', self.env_dir])
+            self.run_pip(['install', 'pip==8.0.2'])
             self._debian_fix()
-
-            self.env_install(['pip==8.0.2'])
 
     def _debian_fix(self):
         # Remove numpy/ symlink under include/python* added by debian
