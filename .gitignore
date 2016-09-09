@@ -2,3 +2,6 @@
 *.pyc
 *.bak
 /cache
+/.cache
+/.coverage
+/*.egg-info
