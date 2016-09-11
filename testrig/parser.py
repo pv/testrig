@@ -95,7 +95,7 @@ def parse_pytest_log(text, cwd):
         failures[key] = "\n".join(failures[key])
 
     # Check the test suite ran to the end
-    m = re.match(r'.*in [0-9.,]+ seconds =+\s*$', text, re.S)
+    m = re.match(r'.*in [0-9.,]+ seconds =*\s*$', text, re.S)
     if not m:
         test_count = -1
         err_msg = "ERROR: test suite did not run to the end"
