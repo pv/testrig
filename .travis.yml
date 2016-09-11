@@ -7,13 +7,13 @@ matrix:
     - python: 2.7
       env:
         - MODULE=numba
-        - LLVM_CONFIG=llvm-config-3.6
+        - LLVM_CONFIG=llvm-config-3.8
       addons:
         apt:
           sources:
           - ubuntu-toolchain-r-test
           - llvm-toolchain-precise
-          - llvm-toolchain-precise-3.6
+          - llvm-toolchain-precise-3.8
           packages:
           - libatlas-dev
           - libatlas-base-dev
@@ -22,7 +22,7 @@ matrix:
           - libgmp-dev
           - libmpfr-dev
           - ccache
-          - llvm-3.6-dev
+          - llvm-3.8-dev
           - libedit-dev
           - gcc-4.9
           - g++-4.9
