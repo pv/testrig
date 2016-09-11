@@ -75,7 +75,7 @@ class BaseFixture(object):
 
     def get_info(self):
         cmd = [os.path.join(self.env_dir, 'bin', 'pip'), 'freeze']
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         out, err = p.communicate()
         return " ".join(sorted(out.split()))
 
@@ -93,7 +93,7 @@ class BaseFixture(object):
             env = dict(env)
         env['CCACHE_BASEDIR'] = self.env_dir
 
-        subprocess.check_call(cmd, stdout=self.log, stderr=subprocess.STDOUT, cwd=cwd, env=env)
+        subprocess.check_call(cmd, stdout=self.log, stderr=self.log, cwd=cwd, env=env)
 
     def run_test_cmd(self, cmd, log):
         raise NotImplemented()
@@ -232,7 +232,7 @@ sysconfig.get_python_inc = _xx_get_python_inc
 
         self.print("$ cd cache/env; " + cmd, level=1)
 
-        subprocess.call(cmd, stdout=log, stderr=subprocess.STDOUT, shell=True,
+        subprocess.call(cmd, stdout=log, stderr=log, shell=True,
                         cwd=self.env_dir)
 
 
@@ -309,7 +309,7 @@ class CondaFixture(BaseFixture):
 
         self.print("$ cd cache/env; " + cmd, level=1)
 
-        subprocess.call(cmd, stdout=log, stderr=subprocess.STDOUT, shell=True,
+        subprocess.call(cmd, stdout=log, stderr=log, shell=True,
                         cwd=self.env_dir)
 
 
