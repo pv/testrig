@@ -73,6 +73,11 @@ The configuration items in each section are:
 * ``run``: command that runs the tests.
 * ``parser``: parser for the test output. Available options:
 
+  - ``junit``: parses xUnit/jUnit xml result output. It is assumed the
+    result is stored in a file ``junit.xml`` in the working directory.
+    Both nose and py.test can produce it: ``py.test --junit-xml=junit.xml ...`` and
+    ``nosetests --with-xunit --xunit-file=junit.xml ...``.
   - ``nose``: parses nose stdout
-  - ``pytest-log``: parses contents from ``py.test --result-log=pytest.log ...``
-
+  - ``pytest-log``: parses contents from ``py.test --result-log=pytest.log ...``.
+    The results are assumed to be stored in ``pytest.log`` in the current
+    working directory.

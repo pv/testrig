@@ -5,6 +5,8 @@ import re
 import os
 import io
 
+import xml.etree.ElementTree as etree
+
 
 def parse_nose(text, cwd):
     failures = {}
@@ -105,7 +107,55 @@ def parse_pytest_log(text, cwd):
     return failures, warns, test_count, err_msg
 
 
-def _parse_warnings(text, suite):
+def parse_junit(text, cwd):
+    xml_fn = os.path.join(cwd, 'junit.xml')
+
+    if not os.path.isfile(xml_fn):
+        return {}, {}, -1, "ERROR: log file 'junit.xml' not found"
+
+    failures = {}
+    warns = {}
+
+    tree = etree.parse(xml_fn)
+    suite = tree.getroot()
+    cases = suite.findall('testcase')
+
+    test_count = len(cases)
+
+    for case in cases:
+        failure = case.find('failure')
+        error = case.find('error')
+
+        stdout = case.find('system-out')
+        stderr = case.find('system-err')
+        name = case.attrib['classname'] + '.' + case.attrib['name']
+
+        if stdout is not None:
+            stdout = stdout.text
+        else:
+            stdout = ''
+
+        if stderr is not None:
+            stderr = stderr.text
+        else:
+            stderr = ''
+
+        if failure is not None:
+            message = "\n".join(["-"*79, name] + failure.text.splitlines())
+            failures[name] = message
+
+        if error is not None:
+            message = "\n".join(["-"*79, name] + error.text.splitlines())
+            failures[name] = message
+
+        # Warnings
+        text = stdout + "\n" + stderr
+        warns.update(_parse_warnings(text, 'single', name))
+
+    return failures, warns, test_count, None
+
+
+def _parse_warnings(text, suite, default_test_name=None):
     test_name = ''
     key = None
     w = {}
@@ -123,6 +173,9 @@ def _parse_warnings(text, suite):
             if m:
                 key = None
                 test_name = m.group(1).strip()
+        elif suite == 'single':
+            key = None
+            test_name = default_test_name
         else:
             raise ValueError()
 
@@ -150,6 +203,7 @@ def _parse_warnings(text, suite):
 
 def get_parser(name):
     parsers = {'nose': parse_nose,
+               'junit': parse_junit,
                'pytest-log': parse_pytest_log}
     try:
         return parsers[name]
