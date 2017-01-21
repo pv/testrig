@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-run.py [OPTIONS] [TESTS...]
+testrig [OPTIONS] [TESTS...]
 
 Run tests in the test rig.
 
