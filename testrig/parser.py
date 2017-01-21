@@ -124,7 +124,8 @@ def parse_junit(text, cwd):
 
     for case in cases:
         failure = case.find('failure')
-        error = case.find('error')
+        if failure is None:
+            failure = case.find('error')
 
         stdout = case.find('system-out')
         stderr = case.find('system-err')
@@ -140,12 +141,9 @@ def parse_junit(text, cwd):
         else:
             stderr = ''
 
-        if failure is not None:
+        if (failure is not None and
+                failure.attrib.get('type', '') != 'numpy.testing.utils.KnownFailureException'):
             message = "\n".join(["-"*79, name] + failure.text.splitlines())
-            failures[name] = message
-
-        if error is not None:
-            message = "\n".join(["-"*79, name] + error.text.splitlines())
             failures[name] = message
 
         # Warnings
