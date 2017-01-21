@@ -29,7 +29,7 @@ except ImportError:
 from .fixture import get_fixture_cls
 from .lockfile import LockFile
 from .parser import get_parser
-
+from testrig import __version__
 
 EXTRA_PATH = [
     '/usr/lib/ccache',
@@ -63,6 +63,8 @@ def main():
                    help="build and run tests in parallel")
     p.add_argument('--verbose', '-v', action="store_true",
                    dest="verbose", help="be more verbose")
+    p.add_argument('--version', action="version", version="%(prog)s " + __version__,
+                   help="Print program version")
     p.add_argument('tests', nargs='*', default=[], metavar='TESTS',
                    help="Tests to run. Can also be a glob pattern, e.g., '*scipy_dev*'")
     args = p.parse_args()
