@@ -41,7 +41,8 @@ class BaseFixture(object):
 
     """
 
-    def __init__(self, cache_dir, log, print_logged=None, cleanup=True, git_cache=True, verbose=False):
+    def __init__(self, cache_dir, log, print_logged=None, cleanup=True, git_cache=True, verbose=False,
+                 extra_env=None):
         self.log = log
         self.cleanup = cleanup
         self.git_cache = git_cache
@@ -58,6 +59,10 @@ class BaseFixture(object):
         self.code_dir = os.path.join(self.cache_dir, 'code')
         self.build_dir = os.path.join(self.cache_dir, 'build')
         self.repo_cache_dir = os.path.join(self.cache_dir, 'git-cache')
+        if not extra_env:
+            self.extra_env = {}
+        else:
+            self.extra_env = extra_env
 
     def setup(self):
         for d in (self.code_dir, self.build_dir, self.repo_cache_dir):
@@ -92,6 +97,7 @@ class BaseFixture(object):
         else:
             env = dict(env)
         env['CCACHE_BASEDIR'] = self.env_dir
+        env.update(self.extra_env)
 
         subprocess.check_call(cmd, stdout=self.log, stderr=self.log, cwd=cwd, env=env)
 

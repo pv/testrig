@@ -67,22 +67,6 @@ def main():
                    help="Tests to run. Can also be a glob pattern, e.g., '*scipy_dev*'")
     args = p.parse_args()
 
-    tests = get_tests(args.config)
-
-    # Grab selected tests
-    if not args.tests:
-        selected_tests = tests
-    else:
-        selected_tests = []
-        for t in tests:
-            for sel in args.tests:
-                if fnmatch.fnmatch(t.name, sel):
-                    selected_tests.append(t)
-                    break
-
-    if not selected_tests:
-        p.error('no tests to run')
-
     # Open log
     cache_dir = os.path.abspath(args.cache_dir)
     try:
@@ -96,6 +80,22 @@ def main():
     with text_open(log_fn, 'w'):
         pass
     LOG_STREAM = text_open(log_fn, 'a')
+
+    # Grab selected tests
+    tests = get_tests(args.config)
+
+    if not args.tests:
+        selected_tests = tests
+    else:
+        selected_tests = []
+        for t in tests:
+            for sel in args.tests:
+                if fnmatch.fnmatch(t.name, sel):
+                    selected_tests.append(t)
+                    break
+
+    if not selected_tests:
+        p.error('no tests to run')
 
     # Run
     set_extra_env()
@@ -213,10 +213,12 @@ def get_tests(config):
 
     tests = []
 
-    def get(section, name):
+    def get(section, name, default=None):
         if not p.has_option(section, name):
             if p.has_option('DEFAULT', name):
                 return p.get('DEFAULT', name)
+            if default is not None:
+                return default
         return p.get(section, name)
 
     for section in p.sections():
@@ -230,7 +232,9 @@ def get_tests(config):
                      get(section, 'new'),
                      get(section, 'run'),
                      get(section, 'parser'),
-                     get(section, 'env'))
+                     get(section, 'env'),
+                     get(section, 'envvars', ''),
+                     os.path.abspath(os.path.dirname(config)))
             tests.append(t)
         except (ValueError, configparser.Error) as err:
             print_logged("testrig.ini: section {}: {}".format(section, err))
@@ -240,7 +244,8 @@ def get_tests(config):
 
 
 class Test(object):
-    def __init__(self, name, base_install, old_install, new_install, run_cmd, parser, environment):
+    def __init__(self, name, base_install, old_install, new_install, run_cmd, parser, environment,
+                 envvars, config_dir):
         self.name = name
         self.base_install = base_install.split()
         self.old_install = old_install.split()
@@ -250,6 +255,15 @@ class Test(object):
         self.parser = get_parser(parser)
         self.fixture_cls = get_fixture_cls(environment)
         self.env_name = environment
+        self.environ = {}
+        for line in envvars.splitlines():
+            if not line.strip():
+                continue
+            if '=' not in line:
+                raise ValueError("Invalid envvars line '{0}'".format(line))
+            name, value = line.split('=', 1)
+            value = value.replace('$DIR', config_dir)
+            self.environ[name.strip()] = value
 
     def print_info(self):
         print_logged(("[{0}]\n"
@@ -259,9 +273,11 @@ class Test(object):
                       "    run={4}\n"
                       "    parser={5}\n"
                       "    env={6}\n"
+                      "    envvars={7}\n"
                       ).format(self.name, " ".join(self.base_install),
                                " ".join(self.old_install), " ".join(self.new_install),
-                               self.run_cmd, self.parser_name, self.env_name))
+                               self.run_cmd, self.parser_name, self.env_name,
+                               "\n    ".join("{0}={1}".format(x, y) for x, y in sorted(self.environ.items()))))
 
     def run(self, cache_dir, log_dir, cleanup=True, git_cache=True, verbose=False):
         log_old_fn = os.path.join(log_dir, '%s-build-old.log' % self.name)
@@ -283,7 +299,8 @@ class Test(object):
                                              (log_new_fn, test_log_new_fn, self.new_install)):
             log = text_open(log_fn, 'w')
             fixture = self.fixture_cls(cache_dir, log, print_logged=print_logged,
-                                       cleanup=cleanup, git_cache=git_cache, verbose=verbose)
+                                       cleanup=cleanup, git_cache=git_cache, verbose=verbose,
+                                       extra_env=self.environ)
             try:
                 # Run virtualenv setup + builds
                 wait_printer.set_log_file(log_fn)

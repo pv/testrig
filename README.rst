@@ -54,6 +54,8 @@ versions)::
   base=nose tempita Cython==0.22 scipy==0.17.0
   run=python -c 'import numpy; numpy.test("fast", verbose=2)'
   parser=nose
+  envvars=
+      SETUPCFG=$DIR/mysetup.cfg
 
 The configuration items in each section are:
 
@@ -81,3 +83,6 @@ The configuration items in each section are:
   - ``pytest-log``: parses contents from ``py.test --result-log=pytest.log ...``.
     The results are assumed to be stored in ``pytest.log`` in the current
     working directory.
+* ``envvars``: additional environment variables to set (also for pip install).
+  The text ``$DIR`` is replaced by an absolute path of the directory where the
+  configuration file resides.
