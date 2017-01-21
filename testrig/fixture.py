@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function
 import sys
 import os
 import shutil
+import locale
 import subprocess
 import multiprocessing
 
@@ -78,10 +79,27 @@ class BaseFixture(object):
                 if os.path.isdir(d):
                     shutil.rmtree(d)
 
+    def _decode(self, data):
+        lang, encoding = locale.getdefaultlocale()
+        try:
+            return data.decode(encoding)
+        except UnicodeError:
+            try:
+                return data.decode('utf-8')
+            except UnicodeError:
+                # Ultimate fallback
+                return data.decode('latin1')
+
     def get_info(self):
         cmd = [os.path.join(self.env_dir, 'bin', 'pip'), 'freeze']
         p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         out, err = p.communicate()
+        if not isinstance(out, str):
+            # Py3
+            try:
+                out = out.decode('ascii')
+            except UnicodeError:
+                out = self._decode(out)
         return " ".join(sorted(out.split()))
 
     def run_cmd(self, cmd, cwd=None, env=None):
