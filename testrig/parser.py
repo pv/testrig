@@ -174,7 +174,6 @@ def _parse_warnings(text, suite, default_test_name=None):
                 key = None
                 test_name = m.group(1).strip()
         elif suite == 'single':
-            key = None
             test_name = default_test_name
         else:
             raise ValueError()
