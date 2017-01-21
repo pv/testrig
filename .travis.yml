@@ -34,24 +34,24 @@ matrix:
     - python: 2.7
       env:
         - MODULE=scipy
-    - python: 2.7
-      env:
-        - MODULE=pandas
+    #- python: 2.7
+    #  env:
+    #    - MODULE=pandas
     - python: 2.7
       env:
         - MODULE=sklearn
     - python: 2.7
       env:
         - MODULE=astropy
-    - python: 2.7
-      env:
-        - MODULE=matplotlib
-    - python: 2.7
-      env:
-        - MODULE=statsmodels
-    - python: 2.7
-      env:
-        - MODULE=skimage
+    #- python: 2.7
+    #  env:
+    #    - MODULE=matplotlib
+    #- python: 2.7
+    #  env:
+    #    - MODULE=statsmodels
+    #- python: 2.7
+    #  env:
+    #    - MODULE=skimage
 addons:
   apt:
     packages:
