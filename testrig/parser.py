@@ -116,7 +116,11 @@ def parse_junit(text, cwd):
     failures = {}
     warns = {}
 
-    tree = etree.parse(xml_fn)
+    try:
+        tree = etree.parse(xml_fn)
+    except Exception as exc:
+        return {}, {}, -1, "ERROR: opening 'junit.xml' failed: {0}".format(exc)
+
     suite = tree.getroot()
     cases = suite.findall('testcase')
 
