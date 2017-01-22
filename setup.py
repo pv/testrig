@@ -9,7 +9,7 @@ from setuptools import setup
 from setuptools.command.test import test as TestCommand
 
 
-version = '0.2.dev'
+version = '0.1.1'
 
 
 # A py.test test command
