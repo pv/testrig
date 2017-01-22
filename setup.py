@@ -118,6 +118,11 @@ if __name__ == "__main__":
 
     write_version_file(version_file, version)
 
+    # Read long description
+    readme_fn = os.path.join(basedir, 'README.rst')
+    with open(readme_fn, 'r') as f:
+        long_description = f.read().strip()
+
     # Run setup
     setup(
         name = "testrig",
@@ -137,6 +142,15 @@ if __name__ == "__main__":
         author = "Pauli Virtanen",
         author_email = "pav@iki.fi",
         description = "testrig: running tests for dependent packages",
+        long_description=long_description,
         license = "BSD",
-        url = "http://github.com/pv/testrig"
+        url = "http://github.com/pv/testrig",
+        classifiers=[
+            'Environment :: Console',
+            'Intended Audience :: Developers',
+            'License :: OSI Approved :: BSD License',
+            'Programming Language :: Python :: 2',
+            'Programming Language :: Python :: 3',
+            'Topic :: Software Development :: Testing',
+        ]
     )
