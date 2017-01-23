@@ -80,6 +80,7 @@ install:
   - export PATH=$HOME/f90cache/bin:$PATH
   - pip install virtualenv
 script:
+  - python setup.py test
   - |
     BRANCH=`python ci/latest-maintenance-branch.py https://github.com/numpy/numpy.git`
     sed -e "s#numpy@master#numpy@$BRANCH#" < testrig.ini > run.ini
