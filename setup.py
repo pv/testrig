@@ -134,7 +134,7 @@ if __name__ == "__main__":
             'configparser',
         ],
         package_data = {
-            'testrig': ['tests']
+            'testrig': ['tests/*.py']
         },
         zip_safe = False,
         tests_require = ['pytest'],
