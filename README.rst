@@ -28,10 +28,10 @@ Usage
 
 Run::
 
-    python run.py --help
-    python run.py pandas                            # run tests, default config
-    python run.py --config=testrig-conda.ini pandas # use conda packages
-    python run.py -j                                # run all packages parallel
+    testrig --help
+    testrig --config=examples/testrig.ini pandas       # run tests
+    testrig --config=examples/testrig-conda.ini pandas # use conda packages
+    testrig --config=examples/testrig.ini -j           # run all packages parallel
 
 The runs may take a long time, as it builds everything from source.
 

@@ -43,11 +43,12 @@ class BaseFixture(object):
     """
 
     def __init__(self, cache_dir, log, print_logged=None, cleanup=True, git_cache=True, verbose=False,
-                 extra_env=None):
+                 extra_env=None, python=None):
         self.log = log
         self.cleanup = cleanup
         self.git_cache = git_cache
         self.verbose = verbose
+        self.python = python
 
         if print_logged is None:
             self._print = print

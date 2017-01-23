@@ -55,7 +55,7 @@ def main():
                    dest="config", default='testrig.ini',
                    help="configuration file")
     p.add_argument('--cache', action="store",
-                   dest="cache_dir", default='cache',
+                   dest="cache_dir", default=None,
                    help="cache directory")
     p.add_argument('--parallel', '-j', action="store", type=int, nargs='?',
                    metavar='NUM_PROC',
@@ -69,8 +69,13 @@ def main():
                    help="Tests to run. Can also be a glob pattern, e.g., '*scipy_dev*'")
     args = p.parse_args()
 
+    config_dir = os.path.abspath(os.path.dirname(args.config))
+
     # Open log
-    cache_dir = os.path.abspath(args.cache_dir)
+    if args.cache_dir is None:
+        cache_dir = os.path.join(config_dir, 'cache')
+    else:
+        cache_dir = os.path.abspath(args.cache_dir)
     try:
         os.makedirs(cache_dir)
     except OSError:
@@ -236,7 +241,8 @@ def get_tests(config):
                      get(section, 'parser'),
                      get(section, 'env'),
                      get(section, 'envvars', ''),
-                     os.path.abspath(os.path.dirname(config)))
+                     os.path.abspath(os.path.dirname(config)),
+                     get(section, 'python', None))
             tests.append(t)
         except (ValueError, configparser.Error) as err:
             print_logged("testrig.ini: section {}: {}".format(section, err))
