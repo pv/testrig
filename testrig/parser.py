@@ -8,7 +8,10 @@ import io
 import xml.etree.ElementTree as etree
 
 
-def parse_nose(text, cwd):
+def parse_nose(text, cwd, param):
+    if param is not None:
+        raise ValueError("Unknown parameters '{:r}' for parser 'nose'".format(param))
+
     failures = {}
     test_count = -1
 
@@ -62,11 +65,16 @@ def parse_nose(text, cwd):
     return failures, warns, test_count, err_msg
 
 
-def parse_pytest_log(text, cwd):
-    log_fn = os.path.join(cwd, 'pytest.log')
+def parse_pytest_log(text, cwd, param):
+    if param is not None:
+        logfile = 'pytest.log'
+    else:
+        logfile = param
+
+    log_fn = os.path.join(cwd, logfile)
 
     if not os.path.isfile(log_fn):
-        return {}, {}, -1, "ERROR: log file 'pytest.log' not found"
+        return {}, {}, -1, "ERROR: log file '{}' not found".format(logfile)
 
     failures = {}
     test_count = 0
@@ -107,11 +115,16 @@ def parse_pytest_log(text, cwd):
     return failures, warns, test_count, err_msg
 
 
-def parse_junit(text, cwd):
-    xml_fn = os.path.join(cwd, 'junit.xml')
+def parse_junit(text, cwd, param):
+    if param is not None:
+        logfile = 'junit.xml'
+    else:
+        logfile = param
+
+    xml_fn = os.path.join(cwd, logfile)
 
     if not os.path.isfile(xml_fn):
-        return {}, {}, -1, "ERROR: log file 'junit.xml' not found"
+        return {}, {}, -1, "ERROR: log file '{}' not found".format(logfile)
 
     failures = {}
     warns = {}
@@ -206,8 +219,16 @@ def get_parser(name):
     parsers = {'nose': parse_nose,
                'junit': parse_junit,
                'pytest-log': parse_pytest_log}
+
+    if ':' in name:
+        name, param = name.split(':', 1)
+    else:
+        param = None
+
     try:
-        return parsers[name]
+        func = parsers[name]
     except KeyError:
         raise ValueError("Unknown parser name: {0}; not one of {1}".format(name,
                                                                            sorted(parsers.keys())))
+
+    return lambda text, suite: func(text, suite, param)
