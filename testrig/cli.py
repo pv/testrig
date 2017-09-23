@@ -252,7 +252,7 @@ def get_tests(config):
 
 class Test(object):
     def __init__(self, name, base_install, old_install, new_install, run_cmd, parser, environment,
-                 envvars, config_dir):
+                 envvars, config_dir, python):
         self.name = name
         self.base_install = base_install.split()
         self.old_install = old_install.split()
@@ -262,6 +262,7 @@ class Test(object):
         self.parser = get_parser(parser)
         self.fixture_cls = get_fixture_cls(environment)
         self.env_name = environment
+        self.python = python
         self.environ = {}
         for line in envvars.splitlines():
             if not line.strip():
@@ -280,10 +281,11 @@ class Test(object):
                       "    run={4}\n"
                       "    parser={5}\n"
                       "    env={6}\n"
-                      "    envvars={7}\n"
+                      "    python={7}\n"
+                      "    envvars={8}\n"
                       ).format(self.name, " ".join(self.base_install),
                                " ".join(self.old_install), " ".join(self.new_install),
-                               self.run_cmd, self.parser_name, self.env_name,
+                               self.run_cmd, self.parser_name, self.env_name, self.python,
                                "\n    ".join("{0}={1}".format(x, y) for x, y in sorted(self.environ.items()))))
 
     def run(self, cache_dir, log_dir, cleanup=True, git_cache=True, verbose=False):
@@ -307,7 +309,7 @@ class Test(object):
             log = text_open(log_fn, 'w')
             fixture = self.fixture_cls(cache_dir, log, print_logged=print_logged,
                                        cleanup=cleanup, git_cache=git_cache, verbose=verbose,
-                                       extra_env=self.environ)
+                                       extra_env=self.environ, python=self.python)
             try:
                 # Run virtualenv setup + builds
                 wait_printer.set_log_file(log_fn)

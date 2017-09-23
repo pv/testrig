@@ -196,8 +196,7 @@ class VirtualenvFixture(BaseFixture):
         BaseFixture.setup(self)
 
         with VIRTUALENV_LOCK:
-            self.run_cmd(['virtualenv', self.env_dir])
-            self.run_pip(['install', 'pip==8.0.2'])
+            self.run_cmd([self.python, '-mvirtualenv', self.env_dir])
             self._debian_fix()
 
     def _debian_fix(self):
@@ -246,7 +245,7 @@ sysconfig.get_python_inc = _xx_get_python_inc
             shutil.rmtree(self.build_dir)
         os.makedirs(self.build_dir)
         try:
-            self.run_pip(['install', '--no-use-wheel', '-b', self.build_dir] + packages)
+            self.run_pip(['install', '--no-binary', ':all:', '-b', self.build_dir] + packages)
         finally:
             if os.path.isdir(self.build_dir):
                 shutil.rmtree(self.build_dir)
@@ -266,7 +265,7 @@ class CondaFixture(BaseFixture):
 
     def setup(self):
         BaseFixture.setup(self)
-        py_ver = 'python={0}.{1}'.format(sys.version_info[0], sys.version_info[1])
+        py_ver = 'python={0}'.format(self.python)
         self.run_cmd(['conda', 'create', '-y', '-p', self.env_dir, py_ver, 'pip'])
 
     def install_spec(self, package_spec):
@@ -323,7 +322,7 @@ class CondaFixture(BaseFixture):
             shutil.rmtree(self.build_dir)
         os.makedirs(self.build_dir)
         try:
-            self.run_pip(['install', '--no-use-wheel', '-b', self.build_dir] + packages)
+            self.run_pip(['install', '--no-binary', ':all:', '-b', self.build_dir] + packages)
         finally:
             if os.path.isdir(self.build_dir):
                 shutil.rmtree(self.build_dir)
