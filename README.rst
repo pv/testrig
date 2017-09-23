@@ -28,10 +28,10 @@ Usage
 
 Run::
 
-    testrig --help
-    testrig --config=examples/testrig.ini pandas       # run tests
-    testrig --config=examples/testrig-conda.ini pandas # use conda packages
-    testrig --config=examples/testrig.ini -j           # run all packages parallel
+    python -mtestrig --help
+    python -mtestrig examples/testrig.ini pandas       # run tests
+    python -mtestrig examples/testrig-conda.ini pandas # use conda packages
+    python -mtestrig examples/testrig.ini -j           # run all packages parallel
 
 The runs may take a long time, as it builds everything from source.
 
@@ -75,14 +75,11 @@ The configuration items in each section are:
 * ``run``: command that runs the tests.
 * ``parser``: parser for the test output. Available options:
 
-  - ``junit``: parses xUnit/jUnit xml result output. It is assumed the
-    result is stored in a file ``junit.xml`` in the working directory.
-    Both nose and py.test can produce it: ``py.test --junit-xml=junit.xml ...`` and
+  - ``junit:FILENAME``: parses xUnit/jUnit xml result output, stored in given
+    filename. Both nose and py.test can produce this output:
+    ``py.test --junit-xml=junit.xml ...`` and
     ``nosetests --with-xunit --xunit-file=junit.xml ...``.
   - ``nose``: parses nose stdout
-  - ``pytest-log``: parses contents from ``py.test --result-log=pytest.log ...``.
-    The results are assumed to be stored in ``pytest.log`` in the current
-    working directory.
 * ``envvars``: additional environment variables to set (also for pip install).
   The text ``$DIR`` is replaced by an absolute path of the directory where the
   configuration file resides.

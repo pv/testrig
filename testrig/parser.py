@@ -65,56 +65,6 @@ def parse_nose(text, cwd, param):
     return failures, warns, test_count, err_msg
 
 
-def parse_pytest_log(text, cwd, param):
-    if param is not None:
-        logfile = 'pytest.log'
-    else:
-        logfile = param
-
-    log_fn = os.path.join(cwd, logfile)
-
-    if not os.path.isfile(log_fn):
-        return {}, {}, -1, "ERROR: log file '{}' not found".format(logfile)
-
-    failures = {}
-    test_count = 0
-    err_msg = None
-
-    message = []
-
-    with io.open(log_fn, 'r', encoding='utf-8', errors='replace') as f:
-        while True:
-            line = f.readline()
-            if not line:
-                break
-            line = line.rstrip("\n")
-
-            if line[:1] in ('F', 'E'):
-                test_count += 1
-                name = line[1:].strip()
-                message = ["-"*79, line]
-                failures[name] = message
-            elif line.startswith(' '):
-                message.append(line[1:])
-                continue
-            else:
-                test_count += 1
-                message = []
-
-    for key in list(failures.keys()):
-        failures[key] = "\n".join(failures[key])
-
-    # Check the test suite ran to the end
-    m = re.match(r'.*in [0-9.,]+ seconds =*\s*$', text, re.S)
-    if not m:
-        test_count = -1
-        err_msg = "ERROR: test suite did not run to the end"
-
-    warns = _parse_warnings(text, suite="pytest")
-
-    return failures, warns, test_count, err_msg
-
-
 def parse_junit(text, cwd, param):
     if param is not None:
         logfile = 'junit.xml'
@@ -217,8 +167,7 @@ def _parse_warnings(text, suite, default_test_name=None):
 
 def get_parser(name):
     parsers = {'nose': parse_nose,
-               'junit': parse_junit,
-               'pytest-log': parse_pytest_log}
+               'junit': parse_junit}
 
     if ':' in name:
         name, param = name.split(':', 1)
