@@ -83,7 +83,7 @@ script:
   - python setup.py test
   - |
     BRANCH=`python ci/latest-maintenance-branch.py https://github.com/numpy/numpy.git`
-    sed -e "s#numpy@master#numpy@$BRANCH#" < testrig.ini > run.ini
-  - python run.py -g --config=run.ini $MODULE
+    sed -e "s#numpy@master#numpy@$BRANCH#" < examples/testrig.ini > run.ini
+  - python -mtestrig -g run.ini $MODULE
 notifications:
   email: false
