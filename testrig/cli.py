@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-testrig [OPTIONS] [TESTS...]
+testrig [OPTIONS] CONFIG_FILE [TESTS...]
 
 Run tests in the test rig.
 
@@ -51,9 +51,6 @@ def main():
     p.add_argument('--no-cleanup', '-n', action="store_false",
                    dest="cleanup", default=True,
                    help="don't clean up afterward")
-    p.add_argument('--config', action="store",
-                   dest="config", default='testrig.ini',
-                   help="configuration file")
     p.add_argument('--cache', action="store",
                    dest="cache_dir", default=None,
                    help="cache directory")
@@ -65,8 +62,10 @@ def main():
                    dest="verbose", help="be more verbose")
     p.add_argument('--version', action="version", version="%(prog)s " + __version__,
                    help="Print program version")
+    p.add_argument('config', action="store", metavar='CONFIG_FILE',
+                   help="configuration file name")
     p.add_argument('tests', nargs='*', default=[], metavar='TESTS',
-                   help="Tests to run. Can also be a glob pattern, e.g., '*scipy_dev*'")
+                   help="tests to run, can also be a glob pattern, e.g. '*scipy_dev*'")
     args = p.parse_args()
 
     config_dir = os.path.abspath(os.path.dirname(args.config))
