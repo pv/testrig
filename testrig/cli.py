@@ -11,6 +11,7 @@ import os
 import sys
 import time
 import fnmatch
+import datetime
 import argparse
 import subprocess
 import threading
@@ -412,6 +413,8 @@ class WaitPrinter(object):
         self.last_time = 0
         self.last_log_size = 0
         self.thread = None
+        self.printed = False
+        self.start_time = datetime.datetime.now()
 
     def set_log_file(self, log_file):
         self.last_time = time.time()
@@ -430,10 +433,17 @@ class WaitPrinter(object):
 
     def stop(self):
         self.waiting = False
+        if self.printed:
+            elapsed = datetime.datetime.now() - self.start_time
+            print("    ... done ({0} elapsed)".format(elapsed),
+                  file=sys.stderr)
+            sys.stderr.flush()
+            self.printed = False
 
     def _run(self):
+        self.start_time = datetime.datetime.now()
         while self.waiting:
-            time.sleep(61)
+            time.sleep(60)
             if time.time() - self.last_time >= 60:
                 self.last_time = time.time()
                 try:
@@ -441,7 +451,10 @@ class WaitPrinter(object):
                 except (TypeError, OSError):
                     continue
                 if size > self.last_log_size:
-                    print("    ... still running", file=sys.stderr)
+                    self.printed = True
+                    elapsed = datetime.datetime.now() - self.start_time
+                    print("    ... still running ({0} elapsed)".format(elapsed), 
+                          file=sys.stderr)
                     sys.stderr.flush()
                 self.last_log_size = size
 
