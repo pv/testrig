@@ -67,9 +67,9 @@ def parse_nose(text, cwd, param):
 
 def parse_junit(text, cwd, param):
     if param is not None:
-        logfile = 'junit.xml'
-    else:
         logfile = param
+    else:
+        logfile = 'junit.xml'
 
     xml_fn = os.path.join(cwd, logfile)
 
