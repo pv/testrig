@@ -225,11 +225,11 @@ def get_tests(config):
         if name in _interpolate_stack:
             raise ValueError("string interpolation cycle for value {}".format(name))
 
+        if p.has_option('DEFAULT', name):
+            default = p.get('DEFAULT', name)
+
         if not p.has_option(section, name):
-            if p.has_option('DEFAULT', name):
-                value = p.get('DEFAULT', name)
-            else:
-                value = default
+            value = default
         else:
             value = p.get(section, name)
 
