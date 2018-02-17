@@ -57,6 +57,8 @@ versions)::
   envvars =
       SETUPCFG=$DIR/mysetup.cfg
 
+More examples can be found under the ``examples/`` folder.
+
 The configuration items in each section are:
 
 * ``env``: which environment to use
