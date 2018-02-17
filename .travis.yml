@@ -51,7 +51,7 @@ script:
   - python setup.py test
   - |
     BRANCH=`python ci/latest-maintenance-branch.py https://github.com/numpy/numpy.git`
-    sed -e "s#numpy@master#numpy@$BRANCH#" < examples/numpy.ini > examples/numpy-master.ini
+    sed -e "s#numpy@master#numpy@$BRANCH#" < examples/numpy.ini > numpy-master.ini
   - if test -s "$CONFIG"; then python -mtestrig -g $CONFIG $MODULES; fi
 notifications:
   email: false
