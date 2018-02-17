@@ -6,6 +6,7 @@ import shutil
 import locale
 import subprocess
 import multiprocessing
+import json
 
 try:
     from shlex import quote as shell_quote
@@ -346,7 +347,14 @@ class CondaFixture(BaseFixture):
                 shutil.rmtree(self.build_dir)
 
     def run_test_cmd(self, cmd, log):
-        cmd = ". bin/activate {0}; {1}".format(shell_quote(self.env_dir), cmd)
+        out = subprocess.check_output(['conda', 'info', '--json'])
+        info = json.loads(out)
+        activate_script = os.path.join(info['sys.prefix'], 'bin', 'activate')
+
+        cmd = "source {0} {1} && {2}".format(
+            shell_quote(os.path.abspath(activate_script)),
+            shell_quote(self.env_dir),
+            cmd)
         cmd = "bash -c {0}".format(shell_quote(cmd))
 
         self.print("$ cd cache/env; " + cmd, level=1)
