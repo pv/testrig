@@ -15,11 +15,11 @@ matrix:
     - python: 3.6
       env:
         - CONFIG=numpy-master.ini
-        - MODULE=sklearn
+        - MODULES=sklearn
     - python: 3.6
       env:
         - CONFIG=numpy-master.ini
-        - MODULE=astropy
+        - MODULES=astropy
 addons:
   apt:
     packages:
@@ -46,6 +46,7 @@ install:
     ln -s $HOME/f90cache/bin/f90cache $HOME/f90cache/bin/gfortran
     popd
   - export PATH=$HOME/f90cache/bin:$PATH
+  - export NPY_NUM_BUILD_JOBS=4
   - pip install virtualenv
 script:
   - python setup.py test
