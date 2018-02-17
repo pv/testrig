@@ -46,14 +46,15 @@ An example first (runs scipy test suite against old and new numpy
 versions)::
 
   [DEFAULT]
-  old=numpy==1.7.2
-  new=Cython==0.22 git+https://github.com/numpy/numpy@master
+  pkg = nose tempita Cython==0.22 scipy==0.17.0
+  old = numpy==1.7.2 {pkg}
+  new = Cython==0.22 git+https://github.com/numpy/numpy@master {pkg}
 
   [scipy]
-  base=nose tempita Cython==0.22 scipy==0.17.0
-  run=python -mpytest --junit-xml=junit.xml --pyargs scipy
-  parser=junit:junit.xml
-  envvars=
+  pkg = {pkg} scipy
+  run = python -mpytest --junit-xml=junit.xml --pyargs scipy
+  parser = junit:junit.xml
+  envvars =
       SETUPCFG=$DIR/mysetup.cfg
 
 The configuration items in each section are:
@@ -67,10 +68,8 @@ The configuration items in each section are:
     ``numpy git+https://github.com/numpy/numpy.git`` since conda only
     understand that packages installed by it are present.
 
-* ``old``: package specifications for the 'old' configuration.
-* ``new``: package specifications for the 'new' configuration.
-* ``base``: packages for both configurations. These are installed
-  after those specified by ``old`` or ``new``.
+* ``old``: package specifications for the 'old' configuration (see below).
+* ``new``: package specifications for the 'new' configuration (see below).
 * ``run``: command that runs the tests.
 * ``parser``: parser for the test output. Available options:
 
@@ -82,3 +81,25 @@ The configuration items in each section are:
 * ``envvars``: additional environment variables to set (also for pip install).
   The text ``$DIR`` is replaced by an absolute path of the directory where the
   configuration file resides.
+
+The values support string interpolation, and default values can be
+specified in the ``DEFAULT`` section. For example::
+
+  [DEFAULT]
+  pre = foo
+  post = quux
+
+  [section]
+  post = {post} quux2
+  new = {pre} bar {post}
+
+produces the value ``new = foo bar quux quux2``.
+
+The package specifications are a string containing a list of pip (or
+conda if using env=conda) packages version specifications, with the
+following additional possible items:
+
+* ``--no-binary``: do not install following packages via wheels or conda.
+* ``--binary``: install following packages via wheels or conda, if possible.
+
+By default, binary packages are used.

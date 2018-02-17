@@ -8,6 +8,7 @@ Run tests in the test rig.
 from __future__ import absolute_import, division, print_function
 
 import os
+import re
 import sys
 import time
 import fnmatch
@@ -220,13 +221,29 @@ def get_tests(config):
 
     tests = []
 
-    def get(section, name, default=None):
+    def get(section, name, default=None, _interpolate_stack=()):
+        if name in _interpolate_stack:
+            raise ValueError("string interpolation cycle for value {}".format(name))
+
         if not p.has_option(section, name):
             if p.has_option('DEFAULT', name):
-                return p.get('DEFAULT', name)
-            if default is not None:
-                return default
-        return p.get(section, name)
+                value = p.get('DEFAULT', name)
+            else:
+                value = default
+        else:
+            value = p.get(section, name)
+
+        if value is not None:
+            # String interpolation
+            stack = _interpolate_stack + (name,)
+            for key in re.findall(r'{([^}]*)}', value):
+                if key == name:
+                    v = default or ''
+                else:
+                    v = get(section, key, None, stack) or ''
+                value = value.replace('{' + key + '}', v)
+
+        return value
 
     for section in p.sections():
         if section == 'DEFAULT':
@@ -234,7 +251,6 @@ def get_tests(config):
 
         try:
             t = Test(section,
-                     get(section, 'base'),
                      get(section, 'old'),
                      get(section, 'new'),
                      get(section, 'run'),
@@ -252,10 +268,9 @@ def get_tests(config):
 
 
 class Test(object):
-    def __init__(self, name, base_install, old_install, new_install, run_cmd, parser, environment,
+    def __init__(self, name, old_install, new_install, run_cmd, parser, environment,
                  envvars, config_dir, python):
         self.name = name
-        self.base_install = base_install.split()
         self.old_install = old_install.split()
         self.new_install = new_install.split()
         self.run_cmd = run_cmd
@@ -276,15 +291,14 @@ class Test(object):
 
     def print_info(self):
         print_logged(("[{0}]\n"
-                      "    base={1}\n"
-                      "    old={2}\n"
-                      "    new={3}\n"
-                      "    run={4}\n"
-                      "    parser={5}\n"
-                      "    env={6}\n"
-                      "    python={7}\n"
-                      "    envvars={8}\n"
-                      ).format(self.name, " ".join(self.base_install),
+                      "    old={1}\n"
+                      "    new={2}\n"
+                      "    run={3}\n"
+                      "    parser={4}\n"
+                      "    env={5}\n"
+                      "    python={6}\n"
+                      "    envvars={7}\n"
+                      ).format(self.name,
                                " ".join(self.old_install), " ".join(self.new_install),
                                self.run_cmd, self.parser_name, self.env_name, self.python,
                                "\n    ".join("{0}={1}".format(x, y) for x, y in sorted(self.environ.items()))))
@@ -319,7 +333,7 @@ class Test(object):
                         self.name, fixture.name, os.path.relpath(fixture.env_dir)))
                     fixture.setup()
                     print_logged("{0}: building (logging to {1})...".format(self.name, os.path.relpath(log_fn)))
-                    fixture.install_spec(install + self.base_install)
+                    fixture.install_spec(install)
                 except BaseException as exc:
                     with text_open(log_fn, 'r') as f:
                         msg = "{0}: ERROR: build failed: {1}\n".format(self.name, str(exc))

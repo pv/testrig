@@ -131,7 +131,6 @@ if __name__ == "__main__":
         entry_points = {'console_scripts': ['testrig = testrig:main']},
         install_requires = [
             'joblib',
-            'configparser',
         ],
         package_data = {
             'testrig': ['tests/*.py']
