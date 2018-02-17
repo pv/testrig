@@ -49,7 +49,7 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 
 def get_git_hash():
     """
-    Get version from asv/__init__.py and generate asv/_version.py
+    Get version from testrig/__init__.py and generate testrig/_version.py
     """
     # Obtain git revision
     githash = ""
