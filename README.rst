@@ -38,10 +38,9 @@ The runs may take a long time, as it builds everything from source.
 Configuration
 -------------
 
-Configuration is read from ``testrig.ini`` by default.  It contains
-sections, one per test environment.  Section named ``DEFAULT`` can be
-used to specify (overridable) default values for the configuration
-items.
+Configuration is read from an ``.ini`` file.  It contains sections, one per
+test environment.  Section named ``DEFAULT`` can be used to specify
+(overridable) default values for the configuration items.
 
 An example first (runs scipy test suite against old and new numpy
 versions)::
@@ -52,8 +51,8 @@ versions)::
 
   [scipy]
   base=nose tempita Cython==0.22 scipy==0.17.0
-  run=python -c 'import numpy; numpy.test("fast", verbose=2)'
-  parser=nose
+  run=python -mpytest --junit-xml=junit.xml --pyargs scipy
+  parser=junit:junit.xml
   envvars=
       SETUPCFG=$DIR/mysetup.cfg
 
