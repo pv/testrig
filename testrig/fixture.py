@@ -251,7 +251,9 @@ sysconfig.get_python_inc = _xx_get_python_inc
             if binary_ok:
                 self.run_pip(['install', '-b', self.build_dir] + packages)
             else:
-                self.run_pip(['install', '--no-binary', ':all:', '-b', self.build_dir] + packages)
+                self.run_pip(['install',
+                              '--upgrade', '--upgrade-strategy', 'only-if-needed', '--force-reinstall',
+                              '--no-binary', ':all:', '-b', self.build_dir] + packages)
         finally:
             if os.path.isdir(self.build_dir):
                 shutil.rmtree(self.build_dir)
@@ -284,7 +286,7 @@ class CondaFixture(BaseFixture):
                 binary_ok = False
             elif part.startswith('git+'):
                 if conda_spec:
-                    self._env_install(conda_spec)
+                    self._env_install(conda_spec, True)
                     conda_spec = []
 
                 if '@' in part:
@@ -297,17 +299,20 @@ class CondaFixture(BaseFixture):
                 self._git_install(module, url[4:], branch)
             elif part.startswith('pip+') or not binary_ok:
                 if conda_spec:
-                    self._env_install(conda_spec)
+                    self._env_install(conda_spec, True)
                     conda_spec = []
-                self.pip_install([part[4:]])
+                if part.startswith('pip+'):
+                    part = part[4:]
+                self.pip_install([part])
             else:
                 conda_spec.append(part)
 
         if conda_spec:
-            self._env_install(conda_spec)
+            self._env_install(conda_spec, True)
             conda_spec = []
 
-    def _env_install(self, packages):
+    def _env_install(self, packages, binary_ok):
+        assert binary_ok
         packages = [spec.replace('==', '=') for spec in packages]
         self.run_cmd(['conda', 'install', '--no-update-deps', '-y', '-p', self.env_dir] + packages)
 
@@ -333,7 +338,9 @@ class CondaFixture(BaseFixture):
             shutil.rmtree(self.build_dir)
         os.makedirs(self.build_dir)
         try:
-            self.run_pip(['install', '--no-binary', ':all:', '-b', self.build_dir] + packages)
+            self.run_pip(['install',
+                          '--upgrade', '--upgrade-strategy', 'only-if-needed', '--force-reinstall',
+                          '--no-binary', ':all:', '-b', self.build_dir] + packages)
         finally:
             if os.path.isdir(self.build_dir):
                 shutil.rmtree(self.build_dir)
