@@ -43,7 +43,7 @@ versions)::
 
   [DEFAULT]
   env = virtualenv
-  pkgs = nose tempita
+  pkgs = pytest tempita
   old = Cython==0.22 numpy==1.11.3 {pkgs}
   new = Cython==0.22 git+https://github.com/numpy/numpy@master {pkgs}
 
