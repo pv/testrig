@@ -36,9 +36,9 @@ from . import __version__
 EXTRA_PATH = [
     '/usr/lib/ccache',
     '/usr/lib64/ccache',
-    '/usr/lib/f90cache'
-    '/usr/lib64/f90cache'
-    '/usr/local/lib/f90cache'
+    '/usr/lib/f90cache',
+    '/usr/lib64/f90cache',
+    '/usr/local/lib/f90cache',
     '/usr/local/lib64/f90cache'
 ]
 
