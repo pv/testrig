@@ -372,4 +372,4 @@ def get_fixture_cls(env):
         return types[env]
     except KeyError:
         raise ValueError("unknown environment type: {0} [supported: {1}]".format(
-            env, ", ".join(sorted(type.keys()))))
+            env, ", ".join(sorted(types.keys()))))

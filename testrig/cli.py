@@ -282,6 +282,9 @@ class Test(object):
         self.parser = get_parser(parser)
         self.fixture_cls = get_fixture_cls(environment)
         self.env_name = environment
+        if not python:
+            python = {'conda': '{0[0]}.{0[1]}'.format(sys.version_info),
+                      'virtualenv': sys.executable}[environment]
         self.python = python
         self.environ = {}
         for line in envvars.splitlines():
