@@ -1,0 +1,6 @@
+include examples/matplotlib-setup.cfg
+include examples/numpy-conda.ini
+include examples/numpy.ini
+include README.rst
+exclude .gitignore .travis.yml
+prune ci
