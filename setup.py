@@ -2,8 +2,8 @@
 
 import sys
 import os
-import re
 import subprocess
+import ast
 
 from setuptools import setup
 from setuptools.command.test import test as TestCommand
@@ -47,6 +47,32 @@ class PyTest(TestCommand):
 basedir = os.path.abspath(os.path.dirname(__file__))
 
 
+def get_version():
+    """Parse current version number from __init__.py"""
+    # Grab the first assignment to __version__
+    version = None
+    init_py = os.path.join(os.path.dirname(__file__),
+                           'testrig', '__init__.py')
+    with open(init_py, 'r') as f:
+        source = f.read()
+    tree = ast.parse(source)
+    for statement in tree.body:
+        if (isinstance(statement, ast.Assign) and
+            len(statement.targets) == 1 and
+            statement.targets[0].id == '__version__'):
+            version = statement.value.s
+            break
+
+    if not version:
+        raise RuntimeError("Failed to parse version from {}".format(init_py))
+
+    if 'dev' in version and not version.endswith('.dev'):
+        raise RuntimeError("Dev version string in {} doesn't end in .dev".format(
+            init_py))
+
+    return version
+
+
 def get_git_hash():
     """
     Get version from testrig/__init__.py and generate testrig/_version.py
@@ -68,7 +94,7 @@ def get_git_hash():
 
 def get_git_revision():
     """
-    Get the number of revisions since the last tag.
+    Get the number of revisions since the beginning.
     """
     revision = "0"
     if os.path.isdir(os.path.join(basedir, '.git')):
@@ -84,17 +110,21 @@ def get_git_revision():
     return revision
 
 
-def write_version_file(filename, version):
+def write_version_file(filename, suffix, githash):
     # Write revision file (only if it needs to be changed)
-    content = """\
-__version__ = "{0}"
-__release__ = {1}
-""".format(version, 'dev' in version)
+    content = ('__suffix__ = "{0}"\n'
+               '__githash__ = "{1}"\n'.format(suffix, githash))
+
+    if not githash.strip():
+        # Not in git repository; probably in sdist, so keep old
+        # version file
+        return
 
     old_content = None
     if os.path.isfile(filename):
         with open(filename, 'r') as f:
             old_content = f.read()
+
     if content != old_content:
         with open(filename, 'w') as f:
             f.write(content)
@@ -102,21 +132,17 @@ __release__ = {1}
 
 if __name__ == "__main__":
     # Update version (if development)
-    version_file = os.path.join(basedir, 'testrig', '_version.py')
+    version = get_version()
+    git_hash = get_git_hash()
 
-    if 'dev' in version:
-        git_hash = get_git_hash()
-        if git_hash:
-            version = '{0}{1}+{2}'.format(
-                version, get_git_revision(), git_hash[:8])
-        elif os.path.isfile(version_file):
-            with open(version_file, 'r') as f:
-                text = f.read()
-                m = re.search('__version__ = \"(.*)\"', text)
-                if m:
-                    version = m.group(1)
+    if version.endswith('.dev'):
+        suffix = '{0}+{1}'.format(get_git_revision(), git_hash[:8])
+        version += suffix
+    else:
+        suffix = ''
 
-    write_version_file(version_file, version)
+    write_version_file(os.path.join(basedir, 'testrig', '_version.py'),
+                       suffix, git_hash)
 
     # Read long description
     readme_fn = os.path.join(basedir, 'README.rst')

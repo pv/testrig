@@ -31,7 +31,7 @@ except ImportError:
 from .fixture import get_fixture_cls
 from .lockfile import LockFile
 from .parser import get_parser
-from testrig import __version__
+from . import __version__
 
 EXTRA_PATH = [
     '/usr/lib/ccache',
