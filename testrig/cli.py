@@ -110,6 +110,8 @@ def main():
         p.error('no tests to run')
 
     # Run
+    os.chdir(config_dir)
+
     set_extra_env()
 
     if not EXTRA_PATH[0]:

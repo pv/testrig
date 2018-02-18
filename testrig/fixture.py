@@ -131,6 +131,22 @@ class BaseFixture(object):
         cmd = [os.path.join(self.env_dir, 'bin', 'pip')] + cmd
         return self.run_cmd(cmd, cwd=cwd)
 
+    def _parse_git_url(self, part):
+        assert part.startswith('git+')
+
+        part = part[4:]
+        if '@' in part:
+            url, branch = part.split('@', 1)
+        else:
+            url = part
+            branch = 'master'
+
+        if url.startswith('.'):
+            url = os.path.abspath(url)
+
+        module = url.strip('/').split('/')[-1]
+        return module, url, branch
+
     def install_spec(self, package_spec):
         """
         Install python packages, based on pip-like version specification string
@@ -142,14 +158,8 @@ class BaseFixture(object):
             elif part == '--no-binary':
                 binary_ok = False
             elif part.startswith('git+'):
-                if '@' in part:
-                    url, branch = part.split('@', 1)
-                else:
-                    url = part
-                    branch = 'master'
-                module = url.strip('/').split('/')[-1]
-
-                self._git_install(module, url[4:], branch)
+                module, url, branch = self._parse_git_url(part)
+                self._git_install(module, url, branch)
             else:
                 self._env_install([part], binary_ok)
 
@@ -290,15 +300,8 @@ class CondaFixture(BaseFixture):
                 if conda_spec:
                     self._env_install(conda_spec, True)
                     conda_spec = []
-
-                if '@' in part:
-                    url, branch = part.split('@', 1)
-                else:
-                    url = part
-                    branch = 'master'
-                module = url.strip('/').split('/')[-1]
-
-                self._git_install(module, url[4:], branch)
+                module, url, branch = self._parse_git_url(part)
+                self._git_install(module, url, branch)
             elif part.startswith('pip+') or not binary_ok:
                 if conda_spec:
                     self._env_install(conda_spec, True)
