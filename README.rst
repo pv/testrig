@@ -42,12 +42,12 @@ An example first (runs scipy test suite against old and new numpy
 versions)::
 
   [DEFAULT]
-  pkgs = nose tempita Cython==0.22 scipy==0.17.0
-  old = numpy==1.7.2 {pkgs}
+  pkgs = nose tempita
+  old = Cython==0.22 numpy==1.7.2 {pkgs}
   new = Cython==0.22 git+https://github.com/numpy/numpy@master {pkgs}
 
   [scipy]
-  pkgs = {pkgs} scipy
+  pkgs = {pkgs} --no-binary scipy
   run = python -mpytest --junit-xml=junit.xml --pyarg scipy
   parser = junit:junit.xml
   envvars =
