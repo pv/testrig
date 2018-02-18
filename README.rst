@@ -19,10 +19,6 @@ incompatibities may arise in this configuration.
 
 Currently, this is POSIX-only, and tested only on Linux.
 
-See `Travis-CI <https://travis-ci.org/pv/testrig/>`__ for most recent results
-for latest Numpy maintenance branch.  Log in to Travis and press the restart
-button to re-run the checks for the latest commit / tag.
-
 Usage
 -----
 

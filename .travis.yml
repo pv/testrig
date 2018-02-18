@@ -5,21 +5,11 @@ sudo: false
 matrix:
   include:
     - python: 3.6
-      env:
-        - CONFIG=
-        - MODULES=
+    - python: 2.7
     - python: 3.6
       env:
         - CONFIG=numpy-master.ini
-        - MODULES=scipy
-    - python: 3.6
-      env:
-        - CONFIG=numpy-master.ini
-        - MODULES=sklearn
-    - python: 3.6
-      env:
-        - CONFIG=numpy-master.ini
-        - MODULES=astropy
+        - MODULES=quantities
 addons:
   apt:
     packages:
