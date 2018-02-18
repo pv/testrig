@@ -164,7 +164,7 @@ def main():
                 name, test_count, fail_same_count, warn_new_count, warn_same_count)
         else:
             ok = False
-            msg += "- {0}: FAIL (ran {1} tests, {2} new failures, {3} pre-existing failures, {4} warnings, {5} pre-existing warnings))\n".format(
+            msg += "- {0}: FAIL (ran {1} tests, {2} new failures, {3} pre-existing failures, {4} warnings, {5} pre-existing warnings)\n".format(
                 name, test_count, fail_new_count, fail_same_count, warn_new_count, warn_same_count)
     msg += "\n"
 
