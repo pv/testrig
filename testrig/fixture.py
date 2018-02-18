@@ -139,7 +139,7 @@ class BaseFixture(object):
             url, branch = part.split('@', 1)
         else:
             url = part
-            branch = 'master'
+            branch = None
 
         if url.startswith('.'):
             url = os.path.abspath(url)
@@ -180,11 +180,20 @@ class BaseFixture(object):
             else:
                 self.run_cmd(['git', 'fetch', src_repo], cwd=cached_repo)
 
-            self.run_cmd(['git', 'clone', '--reference', cached_repo, '-b', branch, src_repo, repo])
+            if branch is not None:
+                self.run_cmd(['git', 'clone', '--reference', cached_repo, '-b', branch, src_repo, repo])
+            else:
+                self.run_cmd(['git', 'clone', '--reference', cached_repo, src_repo, repo])
         else:
-            self.run_cmd(['git', 'clone', '--depth', '1', '-b', branch, src_repo, repo])
+            if branch is not None:
+                self.run_cmd(['git', 'clone', '--depth', '1', '-b', branch, src_repo, repo])
+            else:
+                self.run_cmd(['git', 'clone', '--depth', '1', src_repo, repo])
 
-        self.run_cmd(['git', 'reset', '--hard', branch], cwd=repo)
+        if branch is not None:
+            self.run_cmd(['git', 'reset', '--hard', branch], cwd=repo)
+        else:
+            self.run_cmd(['git', 'reset', '--hard'], cwd=repo)
         self.run_cmd(['git', 'clean', '-f', '-d', '-x'], cwd=repo)
 
         # Do it in a way better for ccache
