@@ -114,7 +114,8 @@ class BaseFixture(object):
             env = dict(os.environ)
         else:
             env = dict(env)
-        env['CCACHE_BASEDIR'] = self.env_dir
+        env.setdefault('CCACHE_BASEDIR', self.env_dir)
+        env.setdefault('CCACHE_SLOPPINESS', 'file_macro,time_macros')
         env.update(self.extra_env)
 
         subprocess.check_call(cmd, stdout=self.log, stderr=self.log, cwd=cwd, env=env)
